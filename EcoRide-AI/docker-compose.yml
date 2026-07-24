@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: ecoride-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  server:
+    build: ./server
+    container_name: ecoride-server
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/ecoride
+    depends_on:
+      - mongodb
+
+  client:
+    build: ./client
+    container_name: ecoride-client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+
+  ai:
+    build: ./ai
+    container_name: ecoride-ai
+    ports:
+      - "8000:8000"
+
+volumes:
+  mongo-data:

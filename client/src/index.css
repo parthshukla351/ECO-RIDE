@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  * {
+    @apply box-border m-0 p-0;
+  }
+  
+  body {
+    @apply font-sans bg-gray-950 text-gray-100 min-h-screen antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-900;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary-600 rounded-full;
+  }
+}
+
+@layer components {
+  /* Glassmorphism */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+  
+  .glass-dark {
+    @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-2xl;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold 
+           px-6 py-3 rounded-xl transition-all duration-200 
+           hover:shadow-lg hover:shadow-primary-500/25 
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-800 hover:bg-gray-700 text-white font-semibold 
+           px-6 py-3 rounded-xl transition-all duration-200 
+           border border-gray-700 hover:border-gray-600;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary-500 text-primary-400 hover:bg-primary-500 
+           hover:text-white font-semibold px-6 py-3 rounded-xl 
+           transition-all duration-200;
+  }
+
+  /* Input */
+  .input-field {
+    @apply w-full bg-gray-800/50 border border-gray-700 text-gray-100 
+           placeholder-gray-500 rounded-xl px-4 py-3 
+           focus:outline-none focus:ring-2 focus:ring-primary-500 
+           focus:border-transparent transition-all duration-200;
+  }
+
+  /* Cards */
+  .card {
+    @apply glass p-6 hover:border-primary-500/30 transition-all duration-300;
+  }
+
+  /* Eco badge */
+  .eco-badge {
+    @apply inline-flex items-center gap-1 bg-primary-500/20 text-primary-400 
+           text-xs font-medium px-2 py-1 rounded-full border border-primary-500/30;
+  }
+
+  /* Page container */
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+
+  /* Section title */
+  .section-title {
+    @apply text-2xl font-bold text-white mb-6;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-400 to-emerald-300 bg-clip-text text-transparent;
+  }
+  
+  .bg-hero {
+    background: radial-gradient(ellipse at top, #064e3b 0%, #111827 50%, #030712 100%);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+  }
+}
