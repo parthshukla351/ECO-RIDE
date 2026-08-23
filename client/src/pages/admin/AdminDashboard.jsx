@@ -6,24 +6,31 @@ import {
   FaLeaf, FaShieldAlt, FaExclamationTriangle,
   FaBan, FaCheck, FaSearch, FaEye, FaTrash
 } from 'react-icons/fa'
+import GlassCard from '../../components/ui/GlassCard'
+import StatCard from '../../components/ui/StatCard'
+import AnimatedButton from '../../components/ui/AnimatedButton'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
+import safetyService from '../../services/safetyService'
+import AgentControlPanel from './AgentControlPanel'
 
 // =====================
 // ADMIN LAYOUT
 // =====================
 const AdminDashboard = () => {
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-[80vh] border border-white/5 rounded-3xl overflow-hidden bg-dark-950 flex shadow-2xl">
       {/* Sidebar */}
       <AdminSidebar />
       
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto">
         <Routes>
           <Route index element={<AdminOverview />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="rides" element={<AdminRides />} />
+          <Route path="safety" element={<AdminSafety />} />
+          <Route path="agents" element={<AgentControlPanel />} />
           <Route path="analytics" element={<AdminAnalytics />} />
         </Routes>
       </div>
@@ -39,24 +46,26 @@ const AdminSidebar = () => {
   
   const links = [
     { path: '/admin', label: 'Overview', icon: FaChartLine, exact: true },
-    { path: '/admin/users', label: 'Users', icon: FaUsers },
-    { path: '/admin/rides', label: 'Rides', icon: FaCar },
-    { path: '/admin/analytics', label: 'Analytics', icon: FaLeaf }
+    { path: '/admin/users', label: 'Platform Users', icon: FaUsers },
+    { path: '/admin/rides', label: 'Shared Rides', icon: FaCar },
+    { path: '/admin/safety', label: 'Safety & Trust', icon: FaShieldAlt },
+    { path: '/admin/agents', label: 'AI Agents Control', icon: FaShieldAlt },
+    { path: '/admin/analytics', label: 'Carbon Metrics', icon: FaLeaf }
   ]
 
   return (
-    <div className="w-64 bg-gray-900 border-r border-gray-800 hidden lg:flex flex-col">
+    <div className="w-64 bg-dark-900/60 backdrop-blur-md border-r border-white/5 hidden lg:flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-gray-800">
-        <h2 className="text-xl font-black text-white">
-          <span className="text-primary-400">Admin</span> Panel
+      <div className="p-6 border-b border-white/5">
+        <h2 className="text-lg font-black text-white font-display">
+          <span className="text-primary-500">EcoRide</span> Admin
         </h2>
-        <p className="text-gray-500 text-xs mt-1">EcoRide AI Management</p>
+        <span className="text-gray-500 text-[10px] font-black uppercase tracking-wider block mt-0.5">Management Console</span>
       </div>
 
       {/* Nav Links */}
       <nav className="flex-1 p-4">
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {links.map(link => {
             const isActive = link.exact 
               ? location.pathname === link.path 
@@ -66,14 +75,14 @@ const AdminSidebar = () => {
               <li key={link.path}>
                 <Link
                   to={link.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-xs font-black uppercase tracking-wider border ${
                     isActive
-                      ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                      ? 'bg-primary-500/10 text-primary-400 border-primary-500/20 shadow-sm'
+                      : 'text-gray-400 border-transparent hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <link.icon className="text-lg" />
-                  <span className="font-medium">{link.label}</span>
+                  <link.icon className="text-sm" />
+                  <span>{link.label}</span>
                 </Link>
               </li>
             )
@@ -82,12 +91,11 @@ const AdminSidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-800">
-        <Link
-          to="/"
-          className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors text-sm"
-        >
-          ← Back to App
+      <div className="p-4 border-t border-white/5">
+        <Link to="/">
+          <AnimatedButton variant="secondary" fullWidth className="text-[10px] uppercase font-black tracking-wider py-2.5">
+            ← Back to App
+          </AnimatedButton>
         </Link>
       </div>
     </div>
@@ -118,8 +126,8 @@ const AdminOverview = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -128,115 +136,79 @@ const AdminOverview = () => {
     {
       title: 'Total Users',
       value: stats?.users?.total || 0,
-      subtitle: `${stats?.users?.newThisMonth || 0} this month`,
+      subtitle: `${stats?.users?.newThisMonth || 0} registered this month`,
       icon: FaUsers,
-      color: 'blue',
-      gradient: 'from-blue-900/30 to-cyan-900/30',
-      border: 'border-blue-500/30'
+      variant: 'cyan'
     },
     {
       title: 'Total Drivers',
       value: stats?.users?.drivers || 0,
-      subtitle: `${stats?.users?.passengers || 0} passengers`,
+      subtitle: `${stats?.users?.passengers || 0} passengers active`,
       icon: FaCar,
-      color: 'green',
-      gradient: 'from-green-900/30 to-emerald-900/30',
-      border: 'border-green-500/30'
+      variant: 'green'
     },
     {
-      title: 'Total Rides',
+      title: 'Active Rides',
       value: stats?.rides?.total || 0,
-      subtitle: `${stats?.rides?.active || 0} active now`,
+      subtitle: `${stats?.rides?.active || 0} currently active now`,
       icon: FaChartLine,
-      color: 'purple',
-      gradient: 'from-purple-900/30 to-pink-900/30',
-      border: 'border-purple-500/30'
+      variant: 'purple'
     },
     {
-      title: 'Revenue',
+      title: 'Platform Revenue',
       value: `₹${(stats?.revenue || 0).toLocaleString()}`,
-      subtitle: 'Total earned',
+      subtitle: 'All-time transaction value',
       icon: FaMoneyBillWave,
-      color: 'yellow',
-      gradient: 'from-yellow-900/30 to-orange-900/30',
-      border: 'border-yellow-500/30'
-    },
-    {
-      title: 'CO₂ Saved',
-      value: `${(stats?.carbonSaved || 0).toFixed(1)} kg`,
-      subtitle: `${((stats?.carbonSaved || 0) / 21).toFixed(0)} trees equivalent`,
-      icon: FaLeaf,
-      color: 'green',
-      gradient: 'from-green-900/30 to-teal-900/30',
-      border: 'border-green-500/30'
-    },
-    {
-      title: 'Completed Rides',
-      value: stats?.rides?.completed || 0,
-      subtitle: `${stats?.rides?.thisMonth || 0} this month`,
-      icon: FaCheck,
-      color: 'cyan',
-      gradient: 'from-cyan-900/30 to-blue-900/30',
-      border: 'border-cyan-500/30'
+      variant: 'yellow'
     }
   ]
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-2">Admin Dashboard</h1>
-        <p className="text-gray-400">Overview of EcoRide AI platform</p>
+    <div className="p-8 space-y-8">
+      <div>
+        <h1 className="text-2xl font-black font-display text-white tracking-tight">Admin Overview</h1>
+        <p className="text-gray-400 text-sm font-medium mt-1">Platform-wide statistics and metrics aggregate.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid sm:grid-cols-2 gap-4">
         {statCards.map((card, index) => (
-          <motion.div
+          <StatCard
             key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`card bg-gradient-to-br ${card.gradient} ${card.border}`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 bg-${card.color}-500/20 rounded-xl flex items-center justify-center`}>
-                <card.icon className={`text-${card.color}-400 text-xl`} />
-              </div>
-            </div>
-            <h3 className="text-3xl font-black text-white mb-1">{card.value}</h3>
-            <p className="text-gray-400 text-sm">{card.title}</p>
-            <p className="text-gray-500 text-xs mt-1">{card.subtitle}</p>
-          </motion.div>
+            title={card.title}
+            value={card.value}
+            subtext={card.subtitle}
+            icon={card.icon}
+            variant={card.variant}
+            delay={index * 0.05}
+          />
         ))}
       </div>
 
-      {/* Quick Links */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <Link
-          to="/admin/users"
-          className="card hover:border-primary-500/50 group"
-        >
-          <FaUsers className="text-primary-400 text-2xl mb-3" />
-          <h3 className="text-white font-bold mb-1">Manage Users</h3>
-          <p className="text-gray-400 text-sm">View, ban, or verify users</p>
+      {/* Quick Navigation Links */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <Link to="/admin/users">
+          <GlassCard className="p-6 border-white/5 bg-dark-900/40 hover:border-primary-500/20">
+            <FaUsers className="text-primary-400 text-xl mb-3" />
+            <h4 className="text-white font-bold text-sm font-display mb-1">User Directory</h4>
+            <p className="text-gray-400 text-xs font-semibold leading-relaxed">Manage user bans, view driver registrations, and verify statuses.</p>
+          </GlassCard>
         </Link>
 
-        <Link
-          to="/admin/rides"
-          className="card hover:border-primary-500/50 group"
-        >
-          <FaCar className="text-primary-400 text-2xl mb-3" />
-          <h3 className="text-white font-bold mb-1">Manage Rides</h3>
-          <p className="text-gray-400 text-sm">View and manage all rides</p>
+        <Link to="/admin/rides">
+          <GlassCard className="p-6 border-white/5 bg-dark-900/40 hover:border-primary-500/20">
+            <FaCar className="text-primary-400 text-xl mb-3" />
+            <h4 className="text-white font-bold text-sm font-display mb-1">Ride Roster</h4>
+            <p className="text-gray-400 text-xs font-semibold leading-relaxed">Oversee scheduled, active, and completed commuter trips.</p>
+          </GlassCard>
         </Link>
 
-        <Link
-          to="/admin/analytics"
-          className="card hover:border-primary-500/50 group"
-        >
-          <FaLeaf className="text-primary-400 text-2xl mb-3" />
-          <h3 className="text-white font-bold mb-1">Carbon Analytics</h3>
-          <p className="text-gray-400 text-sm">View environmental impact</p>
+        <Link to="/admin/analytics">
+          <GlassCard className="p-6 border-white/5 bg-dark-900/40 hover:border-primary-500/20">
+            <FaLeaf className="text-primary-400 text-xl mb-3" />
+            <h4 className="text-white font-bold text-sm font-display mb-1">Environmental Impact</h4>
+            <p className="text-gray-400 text-xs font-semibold leading-relaxed">Monitor emissions offset metrics, trees saved, and eco levels.</p>
+          </GlassCard>
         </Link>
       </div>
     </div>
@@ -292,38 +264,38 @@ const AdminUsers = () => {
       toast.success(data.message)
       fetchUsers()
     } catch (error) {
-      toast.error('Failed to update user')
+      toast.error('Failed to update user status')
     }
   }
 
   const handleVerifyDriver = async (userId) => {
     try {
       await api.put(`/admin/users/${userId}/verify-driver`)
-      toast.success('Driver verified')
+      toast.success('Driver credentials verified successfully')
       fetchUsers()
     } catch (error) {
-      toast.error('Failed to verify driver')
+      toast.error('Failed to verify driver credentials')
     }
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-2">User Management</h1>
-        <p className="text-gray-400">Manage all platform users</p>
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-2xl font-black font-display text-white tracking-tight">Platform Users</h1>
+        <p className="text-gray-400 text-sm font-medium mt-1">Audit passenger status and verify driver licenses.</p>
       </div>
 
       {/* Filters */}
-      <div className="card mb-6">
-        <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
+      <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 p-4">
+        <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 relative">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, or phone..."
-              className="input-field pl-10"
+              placeholder="Search by name, email, phone..."
+              className="input-field pl-11 bg-dark-950/80 text-xs"
             />
           </div>
           <select
@@ -332,61 +304,62 @@ const AdminUsers = () => {
               setRoleFilter(e.target.value)
               setPage(1)
             }}
-            className="input-field w-48"
+            className="input-field w-full md:w-48 bg-dark-950/80 text-xs cursor-pointer py-2.5"
           >
-            <option value="">All Roles</option>
+            <option value="">All Account Roles</option>
             <option value="passenger">Passengers</option>
             <option value="driver">Drivers</option>
             <option value="admin">Admins</option>
           </select>
-          <button type="submit" className="btn-primary">
+          <AnimatedButton type="submit" variant="primary" className="py-2.5 px-6 text-xs uppercase tracking-wider">
             Search
-          </button>
+          </AnimatedButton>
         </form>
-      </div>
+      </GlassCard>
 
       {/* Users Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div className="text-center py-16 space-y-4">
+          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Querying database users...</p>
         </div>
       ) : (
-        <div className="card overflow-hidden p-0">
+        <GlassCard hoverable={false} className="overflow-hidden p-0 border-white/5 bg-dark-900/50">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-gray-800/50">
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">User</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Role</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Status</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Rides</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Rating</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">CO₂ Saved</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Actions</th>
+                <tr className="bg-dark-950/80 border-b border-white/5 text-gray-500 font-bold uppercase tracking-wider">
+                  <th className="px-6 py-4">User</th>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Verification</th>
+                  <th className="px-6 py-4">Completed Rides</th>
+                  <th className="px-6 py-4">Rating</th>
+                  <th className="px-6 py-4">Offset</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-white/5">
                 {users.map(u => (
-                  <tr key={u._id} className="hover:bg-gray-800/30 transition-colors">
+                  <tr key={u._id} className="hover:bg-white/2 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={u.avatar}
+                          src={u.avatar || 'https://res.cloudinary.com/demo/image/upload/v1/default-avatar.png'}
                           alt={u.name}
-                          className="w-10 h-10 rounded-full object-cover border border-gray-700"
+                          className="w-9 h-9 rounded-full object-cover border border-white/10"
                         />
                         <div>
-                          <p className="text-white font-medium">{u.name}</p>
-                          <p className="text-gray-400 text-sm">{u.email}</p>
-                          <p className="text-gray-500 text-xs">{u.phone}</p>
+                          <p className="text-white font-bold leading-tight">{u.name}</p>
+                          <p className="text-gray-500 text-[10px] font-semibold mt-0.5">{u.email}</p>
+                          <p className="text-gray-600 text-[10px] font-mono mt-0.5">{u.phone}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize
-                        ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' :
-                          u.role === 'driver' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-green-500/20 text-green-400'
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider border
+                        ${u.role === 'admin' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                          u.role === 'driver' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                          'bg-green-500/10 text-green-400 border-green-500/20'
                         }`}>
                         {u.role}
                       </span>
@@ -394,49 +367,49 @@ const AdminUsers = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         {u.isBanned && (
-                          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full w-fit">
+                          <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] uppercase font-black rounded-full w-fit">
                             Banned
                           </span>
                         )}
                         {u.isVerified ? (
-                          <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full w-fit">
+                          <span className="px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 text-[9px] uppercase font-black rounded-full w-fit">
                             Verified
                           </span>
                         ) : (
-                          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full w-fit">
+                          <span className="px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[9px] uppercase font-black rounded-full w-fit">
                             Unverified
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-white">{u.totalRides}</td>
-                    <td className="px-6 py-4 text-yellow-400">
+                    <td className="px-6 py-4 text-white font-semibold">{u.totalRides}</td>
+                    <td className="px-6 py-4 text-yellow-400 font-semibold">
                       {u.averageRating?.toFixed(1) || '0.0'} ⭐
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-green-400">{u.totalCO2Saved?.toFixed(1) || 0} kg</span>
+                      <span className="text-green-400 font-semibold">{u.totalCO2Saved?.toFixed(1) || 0} kg</span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {u.role === 'driver' && !u.isDriverVerified && (
                           <button
                             onClick={() => handleVerifyDriver(u._id)}
-                            className="p-2 text-green-400 hover:bg-green-500/20 rounded-lg transition-colors"
-                            title="Verify Driver"
+                            className="p-2 text-green-400 hover:bg-green-500/10 rounded-xl transition-all cursor-pointer"
+                            title="Verify Driver Account"
                           >
-                            <FaShieldAlt />
+                            <FaShieldAlt className="text-sm" />
                           </button>
                         )}
                         <button
                           onClick={() => handleBanUser(u._id, u.name)}
-                          className={`p-2 rounded-lg transition-colors ${
+                          className={`p-2 rounded-xl transition-all cursor-pointer ${
                             u.isBanned
-                              ? 'text-green-400 hover:bg-green-500/20'
-                              : 'text-red-400 hover:bg-red-500/20'
+                              ? 'text-green-400 hover:bg-green-500/10'
+                              : 'text-red-400 hover:bg-red-500/10'
                           }`}
-                          title={u.isBanned ? 'Unban' : 'Ban'}
+                          title={u.isBanned ? 'Unban User' : 'Ban User'}
                         >
-                          <FaBan />
+                          <FaBan className="text-sm" />
                         </button>
                       </div>
                     </td>
@@ -447,28 +420,28 @@ const AdminUsers = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800">
-            <p className="text-gray-400 text-sm">
-              Page {page} of {totalPages}
-            </p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-dark-950/20">
+            <span>Page {page} of {totalPages}</span>
             <div className="flex gap-2">
-              <button
+              <AnimatedButton
                 onClick={() => setPage(prev => Math.max(1, prev - 1))}
                 disabled={page === 1}
-                className="btn-outline text-sm px-3 py-1"
+                variant="secondary"
+                className="py-1.5 px-3 text-[10px] font-black uppercase"
               >
                 Previous
-              </button>
-              <button
+              </AnimatedButton>
+              <AnimatedButton
                 onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={page === totalPages}
-                className="btn-outline text-sm px-3 py-1"
+                variant="secondary"
+                className="py-1.5 px-3 text-[10px] font-black uppercase"
               >
                 Next
-              </button>
+              </AnimatedButton>
             </div>
           </div>
-        </div>
+        </GlassCard>
       )}
     </div>
   )
@@ -510,7 +483,7 @@ const AdminRides = () => {
     if (!confirm('Are you sure you want to delete this ride?')) return
     try {
       await api.delete(`/admin/rides/${rideId}`)
-      toast.success('Ride deleted')
+      toast.success('Ride record deleted')
       fetchRides()
     } catch (error) {
       toast.error('Failed to delete ride')
@@ -518,23 +491,23 @@ const AdminRides = () => {
   }
 
   const statusColors = {
-    scheduled: 'bg-blue-500/20 text-blue-400',
-    in_progress: 'bg-yellow-500/20 text-yellow-400',
-    completed: 'bg-green-500/20 text-green-400',
-    cancelled: 'bg-red-500/20 text-red-400'
+    scheduled: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    in_progress: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+    completed: 'bg-green-500/10 text-green-400 border border-green-500/20',
+    cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20'
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-2">Ride Management</h1>
-        <p className="text-gray-400">Monitor all rides on the platform</p>
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-2xl font-black font-display text-white tracking-tight">Active Platforms Rides</h1>
+        <p className="text-gray-400 text-sm font-medium mt-1">Supervise and manage published commuter routes.</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-white/5 scrollbar-thin">
         {[
-          { value: '', label: 'All' },
+          { value: '', label: 'All Shared Rides' },
           { value: 'scheduled', label: 'Scheduled' },
           { value: 'in_progress', label: 'In Progress' },
           { value: 'completed', label: 'Completed' },
@@ -546,11 +519,11 @@ const AdminRides = () => {
               setStatusFilter(tab.value)
               setPage(1)
             }}
-            className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-              statusFilter === tab.value
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap border
+              ${statusFilter === tab.value
+                ? 'bg-primary-500/10 text-primary-400 border-primary-500/25'
+                : 'bg-dark-900/40 text-gray-400 border-transparent hover:text-white'
+              }`}
           >
             {tab.label}
           </button>
@@ -559,68 +532,66 @@ const AdminRides = () => {
 
       {/* Rides Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div className="text-center py-16 space-y-4">
+          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Querying shared routes...</p>
         </div>
       ) : (
-        <div className="card overflow-hidden p-0">
+        <GlassCard hoverable={false} className="overflow-hidden p-0 border-white/5 bg-dark-900/50">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-gray-800/50">
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Route</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Driver</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Status</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Date</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Seats</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Price</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">CO₂</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase px-6 py-4">Actions</th>
+                <tr className="bg-dark-950/80 border-b border-white/5 text-gray-500 font-bold uppercase tracking-wider">
+                  <th className="px-6 py-4">Route</th>
+                  <th className="px-6 py-4">Driver</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Departure</th>
+                  <th className="px-6 py-4">Seats Reserved</th>
+                  <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4">CO₂ saved</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-white/5">
                 {rides.map(ride => (
-                  <tr key={ride._id} className="hover:bg-gray-800/30">
+                  <tr key={ride._id} className="hover:bg-white/2 transition-colors">
                     <td className="px-6 py-4">
-                      <p className="text-white font-medium">
+                      <p className="text-white font-bold leading-tight">
                         {ride.origin?.city} → {ride.destination?.city}
                       </p>
-                      <p className="text-gray-500 text-xs">{ride.distance} km</p>
+                      <p className="text-gray-500 text-[10px] font-semibold mt-0.5">{ride.distance} km total</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-white text-sm">{ride.driver?.name}</p>
-                      <p className="text-gray-500 text-xs">{ride.driver?.email}</p>
+                      <p className="text-white font-bold">{ride.driver?.name}</p>
+                      <p className="text-gray-500 text-[10px] font-semibold mt-0.5">{ride.driver?.email}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[ride.status]}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider border ${statusColors[ride.status]}`}>
                         {ride.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-400 text-sm">
+                    <td className="px-6 py-4 text-gray-400 font-semibold">
                       {new Date(ride.departureTime).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-white">
+                    <td className="px-6 py-4 text-white font-bold">
                       {ride.totalSeats - ride.availableSeats}/{ride.totalSeats}
                     </td>
-                    <td className="px-6 py-4 text-primary-400 font-semibold">
+                    <td className="px-6 py-4 text-primary-400 font-black">
                       ₹{ride.pricePerSeat}
                     </td>
-                    <td className="px-6 py-4 text-green-400 text-sm">
-                      {ride.carbonSaved?.toFixed(2)} kg
+                    <td className="px-6 py-4 text-green-400 font-semibold">
+                      {ride.carbonSaved?.toFixed(1)} kg
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Link
-                          to={`/ride/${ride._id}`}
-                          className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg"
-                          title="View"
-                        >
-                          <FaEye />
+                      <div className="flex gap-1">
+                        <Link to={`/ride/${ride._id}`}>
+                          <button className="p-2 text-primary-400 hover:bg-primary-500/10 rounded-xl transition-all cursor-pointer">
+                            <FaEye />
+                          </button>
                         </Link>
                         <button
                           onClick={() => handleDeleteRide(ride._id)}
-                          className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
-                          title="Delete"
+                          className="p-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
                         >
                           <FaTrash />
                         </button>
@@ -633,26 +604,28 @@ const AdminRides = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800">
-            <p className="text-gray-400 text-sm">Page {page} of {totalPages}</p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-dark-950/20">
+            <span>Page {page} of {totalPages}</span>
             <div className="flex gap-2">
-              <button
+              <AnimatedButton
                 onClick={() => setPage(prev => Math.max(1, prev - 1))}
                 disabled={page === 1}
-                className="btn-outline text-sm px-3 py-1"
+                variant="secondary"
+                className="py-1.5 px-3 text-[10px] font-black"
               >
                 Previous
-              </button>
-              <button
+              </AnimatedButton>
+              <AnimatedButton
                 onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={page === totalPages}
-                className="btn-outline text-sm px-3 py-1"
+                variant="secondary"
+                className="py-1.5 px-3 text-[10px] font-black"
               >
                 Next
-              </button>
+              </AnimatedButton>
             </div>
           </div>
-        </div>
+        </GlassCard>
       )}
     </div>
   )
@@ -674,7 +647,7 @@ const AdminAnalytics = () => {
       const { data } = await api.get('/admin/stats')
       setStats(data.stats)
     } catch (error) {
-      toast.error('Failed to load analytics')
+      toast.error('Failed to load analytics data')
     } finally {
       setLoading(false)
     }
@@ -682,8 +655,8 @@ const AdminAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -694,56 +667,54 @@ const AdminAnalytics = () => {
   const flightsAvoided = (carbonKg / 255).toFixed(1)
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-2">
-          🌱 Carbon Analytics Dashboard
-        </h1>
-        <p className="text-gray-400">Environmental impact of EcoRide AI</p>
+    <div className="p-8 space-y-8">
+      <div>
+        <h1 className="text-2xl font-black font-display text-white tracking-tight">Environmental Impact Metrics</h1>
+        <p className="text-gray-400 text-sm font-medium mt-1">Detailed evaluation of carbon savings across the platform.</p>
       </div>
 
-      {/* Impact Cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="card bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/30 text-center">
-          <div className="text-4xl mb-3">🌍</div>
-          <h3 className="text-3xl font-black text-white mb-1">{carbonKg.toFixed(1)} kg</h3>
-          <p className="text-gray-400 text-sm">Total CO₂ Saved</p>
-        </div>
+      {/* Impact Indicators */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 text-center space-y-2">
+          <div className="text-3xl">🌍</div>
+          <h3 className="text-2xl font-black font-display text-white">{carbonKg.toFixed(1)} kg</h3>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Total CO₂ Saved</p>
+        </GlassCard>
 
-        <div className="card bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-emerald-500/30 text-center">
-          <div className="text-4xl mb-3">🌳</div>
-          <h3 className="text-3xl font-black text-white mb-1">{treesEquivalent}</h3>
-          <p className="text-gray-400 text-sm">Trees Equivalent</p>
-        </div>
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 text-center space-y-2">
+          <div className="text-3xl">🌳</div>
+          <h3 className="text-2xl font-black font-display text-white">{treesEquivalent}</h3>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Trees Planting Equivalent</p>
+        </GlassCard>
 
-        <div className="card bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border-blue-500/30 text-center">
-          <div className="text-4xl mb-3">🚗</div>
-          <h3 className="text-3xl font-black text-white mb-1">{carsOffRoad}</h3>
-          <p className="text-gray-400 text-sm">Cars Off Road (Year)</p>
-        </div>
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 text-center space-y-2">
+          <div className="text-3xl">🚗</div>
+          <h3 className="text-2xl font-black font-display text-white">{carsOffRoad}</h3>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Cars Taken Off Road (Year)</p>
+        </GlassCard>
 
-        <div className="card bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/30 text-center">
-          <div className="text-4xl mb-3">✈️</div>
-          <h3 className="text-3xl font-black text-white mb-1">{flightsAvoided}</h3>
-          <p className="text-gray-400 text-sm">Flights Avoided (Delhi-Mumbai)</p>
-        </div>
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 text-center space-y-2">
+          <div className="text-3xl">✈️</div>
+          <h3 className="text-2xl font-black font-display text-white">{flightsAvoided}</h3>
+          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Delhi-Mumbai Flights Saved</p>
+        </GlassCard>
       </div>
 
-      {/* Platform Stats */}
+      {/* Platform Health and Metrics */}
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="card">
-          <h3 className="text-xl font-bold text-white mb-6">Platform Health</h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-400">Ride Completion Rate</span>
-                <span className="text-white font-semibold">
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 p-6 space-y-6">
+          <h3 className="text-white font-bold font-display text-base">Platform Health</h3>
+          <div className="space-y-4 text-xs font-semibold">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Ride Completion Ratio</span>
+                <span className="text-white font-bold">
                   {stats?.rides?.total > 0 
                     ? ((stats.rides.completed / stats.rides.total) * 100).toFixed(1) 
                     : 0}%
                 </span>
               </div>
-              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-dark-950 rounded-full overflow-hidden border border-white/5">
                 <div 
                   className="h-full bg-green-500 rounded-full"
                   style={{ 
@@ -755,64 +726,248 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-400">User Verification Rate</span>
-                <span className="text-white font-semibold">
-                  {stats?.users?.total > 0 
-                    ? (70).toFixed(1)
-                    : 0}%
-                </span>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Verification Index</span>
+                <span className="text-white font-bold">70.0%</span>
               </div>
-              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-dark-950 rounded-full overflow-hidden border border-white/5">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }} />
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between text-sm mb-2">
+            <div className="space-y-2">
+              <div className="flex justify-between">
                 <span className="text-gray-400">Driver to Passenger Ratio</span>
-                <span className="text-white font-semibold">
+                <span className="text-white font-bold">
                   1:{stats?.users?.drivers > 0 
                     ? Math.round(stats.users.passengers / stats.users.drivers) 
                     : 0}
                 </span>
               </div>
-              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-dark-950 rounded-full overflow-hidden border border-white/5">
                 <div className="h-full bg-purple-500 rounded-full" style={{ width: '40%' }} />
               </div>
             </div>
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="card">
-          <h3 className="text-xl font-bold text-white mb-6">Key Metrics</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <span className="text-gray-400 text-sm">Total Users</span>
+        <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 p-6 space-y-4">
+          <h3 className="text-white font-bold font-display text-base">Analytical Totals</h3>
+          
+          <div className="space-y-2.5 text-xs font-semibold">
+            <div className="flex justify-between p-3 bg-dark-950/60 border border-white/5 rounded-xl">
+              <span className="text-gray-400">Total Database Users</span>
               <span className="text-white font-bold">{stats?.users?.total || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <span className="text-gray-400 text-sm">Active Rides</span>
+            <div className="flex justify-between p-3 bg-dark-950/60 border border-white/5 rounded-xl">
+              <span className="text-gray-400">Active Ride Schedules</span>
               <span className="text-white font-bold">{stats?.rides?.active || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <span className="text-gray-400 text-sm">Total Revenue</span>
+            <div className="flex justify-between p-3 bg-dark-950/60 border border-white/5 rounded-xl">
+              <span className="text-gray-400">Total Monetized Revenue</span>
               <span className="text-green-400 font-bold">₹{(stats?.revenue || 0).toLocaleString()}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <span className="text-gray-400 text-sm">New Users This Month</span>
-              <span className="text-primary-400 font-bold">{stats?.users?.newThisMonth || 0}</span>
+            <div className="flex justify-between p-3 bg-dark-950/60 border border-white/5 rounded-xl">
+              <span className="text-gray-400">Monthly User Influx</span>
+              <span className="text-primary-400 font-bold">+{stats?.users?.newThisMonth || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-              <span className="text-gray-400 text-sm">Total Bookings</span>
+            <div className="flex justify-between p-3 bg-dark-950/60 border border-white/5 rounded-xl">
+              <span className="text-gray-400">Total Reserved Seats</span>
               <span className="text-white font-bold">{stats?.bookings?.total || 0}</span>
             </div>
           </div>
-        </div>
+        </GlassCard>
       </div>
     </div>
   )
 }
 
-export default AdminDashboard
+// =====================
+// SAFETY & TRUST CONTROL PANEL
+// =====================
+const AdminSafety = () => {
+  const [incidents, setIncidents] = useState([]);
+  const [pendingDrivers, setPendingDrivers] = useState([]);
+  const [loadingIncidents, setLoadingIncidents] = useState(true);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+
+  useEffect(() => {
+    fetchIncidents();
+    fetchPendingDrivers();
+  }, []);
+
+  const fetchIncidents = async () => {
+    try {
+      const data = await safetyService.getSOSIncidents();
+      setIncidents(data.incidents || []);
+    } catch (err) {
+      toast.error('Failed to load SOS incidents');
+    } finally {
+      setLoadingIncidents(false);
+    }
+  };
+
+  const fetchPendingDrivers = async () => {
+    try {
+      const { data } = await api.get('/admin/users?role=driver');
+      const filtered = (data.users || []).filter(
+        (u) => u.driverVerificationStatus === 'PENDING' || u.driverVerificationStatus === 'UNDER_REVIEW'
+      );
+      setPendingDrivers(filtered);
+    } catch (err) {
+      toast.error('Failed to load pending driver requests');
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+
+  const handleAcknowledge = async (id) => {
+    try {
+      await safetyService.resolveSOS(id, { status: 'ACKNOWLEDGED' });
+      toast.success('SOS Incident acknowledged');
+      fetchIncidents();
+    } catch (err) {
+      toast.error('Failed to update incident');
+    }
+  };
+
+  const handleResolve = async (id) => {
+    const notes = prompt('Enter resolution notes:');
+    if (notes === null) return;
+    try {
+      await safetyService.resolveSOS(id, { status: 'RESOLVED', notes });
+      toast.success('SOS Incident marked RESOLVED');
+      fetchIncidents();
+    } catch (err) {
+      toast.error('Failed to resolve incident');
+    }
+  };
+
+  const handleVerifyDriver = async (userId, approve = true) => {
+    try {
+      const status = approve ? 'VERIFIED' : 'REJECTED';
+      await safetyService.reviewVerification(userId, { type: 'driver', status });
+      toast.success(`Driver verification set to ${status}`);
+      fetchPendingDrivers();
+    } catch (err) {
+      toast.error('Failed to update verification status');
+    }
+  };
+
+  return (
+    <div className="p-8 space-y-8">
+      {/* Title */}
+      <div>
+        <h1 className="text-2xl font-black font-display text-white tracking-tight flex items-center gap-2">
+          <FaShieldAlt className="text-primary-500 animate-pulse" /> Safety & Trust Control Panel
+        </h1>
+        <p className="text-gray-400 text-xs font-semibold mt-1">Monitor emergency SOS incidents and approve driver credentials.</p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
+        {/* SOS Incidents Column */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            🚨 Active SOS Incidents ({incidents.filter(i => i.status !== 'RESOLVED').length})
+          </h3>
+
+          {loadingIncidents ? (
+            <div className="text-center py-8">
+              <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          ) : incidents.length === 0 ? (
+            <GlassCard hoverable={false} className="p-8 text-center text-gray-500 text-xs font-semibold border-white/5 bg-dark-900/40">
+              No emergency incidents reported.
+            </GlassCard>
+          ) : (
+            <div className="space-y-3">
+              {incidents.map((incident) => (
+                <GlassCard key={incident._id} hoverable={false} className="border-white/5 bg-dark-900/40 p-5 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-white font-bold text-sm">{incident.user?.name}</h4>
+                      <p className="text-[10px] text-gray-400 font-semibold">{incident.user?.phone} • {incident.user?.email}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-full border
+                      ${incident.status === 'TRIGGERED' 
+                        ? 'bg-red-500/10 border-red-500/20 text-red-400 animate-pulse'
+                        : incident.status === 'ACKNOWLEDGED'
+                          ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                          : 'bg-green-500/10 border-green-500/20 text-green-400'
+                      }`}
+                    >
+                      {incident.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-400 font-semibold space-y-1 bg-dark-950/40 p-3 rounded-xl border border-white/5">
+                    <p>Origin: {incident.ride?.origin?.city}</p>
+                    <p>Destination: {incident.ride?.destination?.city}</p>
+                    <p>Coordinates: {incident.location?.lat?.toFixed(5)}, {incident.location?.lng?.toFixed(5)}</p>
+                  </div>
+
+                  {incident.status !== 'RESOLVED' && (
+                    <div className="flex gap-2 pt-1">
+                      {incident.status === 'TRIGGERED' && (
+                        <AnimatedButton onClick={() => handleAcknowledge(incident._id)} variant="secondary" className="text-[10px] py-1.5 px-3 uppercase tracking-wider font-bold">
+                          Acknowledge
+                        </AnimatedButton>
+                      )}
+                      <AnimatedButton onClick={() => handleResolve(incident._id)} variant="primary" className="text-[10px] py-1.5 px-3 bg-green-600 hover:bg-green-700 uppercase tracking-wider font-bold text-white">
+                        Resolve SOS
+                      </AnimatedButton>
+                    </div>
+                  )}
+                </GlassCard>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Driver Verification Requests Queue */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            📋 Driver Verification Review Queue ({pendingDrivers.length})
+          </h3>
+
+          {loadingDrivers ? (
+            <div className="text-center py-8">
+              <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          ) : pendingDrivers.length === 0 ? (
+            <GlassCard hoverable={false} className="p-8 text-center text-gray-500 text-xs font-semibold border-white/5 bg-dark-900/40">
+              No pending driver verifications in review.
+            </GlassCard>
+          ) : (
+            <div className="space-y-3">
+              {pendingDrivers.map((driver) => (
+                <GlassCard key={driver._id} hoverable={false} className="border-white/5 bg-dark-900/40 p-5 space-y-4">
+                  <div>
+                    <h4 className="text-white font-bold text-sm">{driver.name}</h4>
+                    <p className="text-[10px] text-gray-400 font-semibold">{driver.email} • {driver.phone}</p>
+                  </div>
+
+                  <div className="text-xs text-gray-400 font-semibold space-y-1 bg-dark-950/40 p-3 rounded-xl border border-white/5">
+                    <p>Submitted license: <span className="text-white font-mono">{driver.driverLicense?.number}</span></p>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <AnimatedButton onClick={() => handleVerifyDriver(driver._id, true)} variant="primary" className="text-[10px] py-1.5 px-3 bg-green-600 hover:bg-green-700 uppercase tracking-wider font-bold text-white">
+                      Approve
+                    </AnimatedButton>
+                    <AnimatedButton onClick={() => handleVerifyDriver(driver._id, false)} variant="secondary" className="text-[10px] py-1.5 px-3 text-red-400 border-red-500/20 bg-red-500/5 uppercase tracking-wider font-bold">
+                      Reject
+                    </AnimatedButton>
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;

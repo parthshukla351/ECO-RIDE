@@ -31,6 +31,16 @@ const rideSchema = new mongoose.Schema({
   duration: Number, // minutes
   distance: Number, // km
   routePolyline: String,
+  routeCoordinates: [{
+    lat: Number,
+    lng: Number
+  }],
+  intermediatePlaces: [{
+    name: String,
+    lat: Number,
+    lng: Number,
+    progress: Number
+  }],
 
   totalSeats: { type: Number, required: true, min: 1, max: 6 },
   availableSeats: { type: Number, required: true },
@@ -96,6 +106,9 @@ const rideSchema = new mongoose.Schema({
   completedAt: Date,
   cancelledAt: Date,
   cancellationReason: String,
+
+  trafficDelaySeconds: { type: Number, default: 0 },
+  trafficCharge: { type: Number, default: 0 }
 
 }, { timestamps: true });
 

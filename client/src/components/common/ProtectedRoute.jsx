@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 const ProtectedRoute = ({ allowedRoles }) => {
   const { isAuthenticated, user, loading } = useAuth()
@@ -7,10 +7,10 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-dark-950">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-400">Loading EcoRide AI...</p>
+          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500 text-xs font-black uppercase tracking-widest">Loading EcoRide AI...</p>
         </div>
       </div>
     )
@@ -18,6 +18,10 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (user && !user.profileCompleted && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {

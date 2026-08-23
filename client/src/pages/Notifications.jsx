@@ -5,6 +5,8 @@ import {
   FaBell, FaCheckDouble, FaTrash, FaCar, FaLeaf,
   FaMoneyBillWave, FaStar, FaExclamationTriangle
 } from 'react-icons/fa'
+import GlassCard from '../components/ui/GlassCard'
+import AnimatedButton from '../components/ui/AnimatedButton'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -48,7 +50,7 @@ const Notifications = () => {
       await api.put('/notifications/mark-all-read')
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
       setUnreadCount(0)
-      toast.success('All marked as read')
+      toast.success('All notifications marked as read')
     } catch (error) {
       toast.error('Failed to mark all as read')
     }
@@ -58,9 +60,9 @@ const Notifications = () => {
     try {
       await api.delete(`/notifications/${id}`)
       setNotifications(prev => prev.filter(n => n._id !== id))
-      toast.success('Notification deleted')
+      toast.success('Notification removed')
     } catch (error) {
-      toast.error('Failed to delete')
+      toast.error('Failed to delete notification')
     }
   }
 
@@ -69,11 +71,11 @@ const Notifications = () => {
       case 'booking_confirmed':
       case 'booking_cancelled':
       case 'booking_rejected':
-        return <FaCar className="text-blue-400" />
+        return <FaCar className="text-cyan-400" />
       case 'ride_started':
       case 'ride_completed':
       case 'ride_cancelled':
-        return <FaCar className="text-green-400" />
+        return <FaCar className="text-primary-400" />
       case 'payment_success':
       case 'payment_failed':
       case 'refund_processed':
@@ -97,146 +99,159 @@ const Notifications = () => {
   })
 
   return (
-    <div className="min-h-screen bg-white py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-black text-white mb-2 flex items-center gap-3">
-              <FaBell className="text-primary-400" />
-              Notifications
-            </h1>
-            <p className="text-gray-400">
-              {unreadCount > 0 ? (
-                <span>{unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</span>
-              ) : (
-                'All caught up!'
-              )}
-            </p>
-          </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllAsRead}
-              className="btn-outline text-sm flex items-center gap-2"
-            >
-              <FaCheckDouble /> Mark All Read
-            </button>
-          )}
+    <div className="space-y-8 pb-12 max-w-3xl mx-auto">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+      >
+        <div>
+          <h1 className="text-3xl font-black font-display text-white tracking-tight flex items-center gap-3">
+            <FaBell className="text-primary-400" /> Notifications
+          </h1>
+          <p className="text-gray-400 text-sm font-medium mt-1">
+            {unreadCount > 0 ? (
+              <span>You have {unreadCount} unread system alert{unreadCount !== 1 ? 's' : ''}</span>
+            ) : (
+              'You are all caught up!'
+            )}
+          </p>
         </div>
+        {unreadCount > 0 && (
+          <AnimatedButton
+            onClick={handleMarkAllAsRead}
+            variant="secondary"
+            className="text-xs uppercase tracking-wider py-2.5 px-4 font-bold flex items-center gap-2"
+          >
+            <FaCheckDouble className="text-[10px]" /> Mark All Read
+          </AnimatedButton>
+        )}
+      </motion.div>
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'unread', label: 'Unread' },
-            { value: 'read', label: 'Read' }
-          ].map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === tab.value
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      {/* Filter tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-white/5 scrollbar-thin">
+        {[
+          { value: 'all', label: 'All Notifications' },
+          { value: 'unread', label: 'Unread' },
+          { value: 'read', label: 'Read' }
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setFilter(tab.value)}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap border
+              ${filter === tab.value
+                ? 'bg-primary-500/10 text-primary-400 border-primary-500/25 shadow-sm'
+                : 'bg-dark-900/40 text-gray-400 border-transparent hover:text-white'
               }`}
-            >
-              {tab.label}
-              {tab.value === 'unread' && unreadCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-primary-400 text-white text-xs rounded-full">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+          >
+            {tab.label}
+            {tab.value === 'unread' && unreadCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 bg-primary-500 text-white text-[9px] font-black rounded-full leading-none">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-        {/* Notifications List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          <div className="card text-center py-12">
-            <FaBell className="text-gray-600 text-5xl mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No notifications</h3>
-            <p className="text-gray-400">
+      {/* Notifications list */}
+      {loading ? (
+        <div className="text-center py-16 space-y-4">
+          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading alerts...</p>
+        </div>
+      ) : filteredNotifications.length === 0 ? (
+        <GlassCard hoverable={false} className="text-center py-16 space-y-6 border-white/5 bg-dark-900/40">
+          <FaBell className="text-gray-600 text-5xl mx-auto opacity-35" />
+          <div>
+            <h3 className="text-xl font-bold text-white font-display">No Notifications</h3>
+            <p className="text-gray-400 text-sm mt-1">
               {filter === 'all' 
-                ? "You don't have any notifications yet" 
-                : `No ${filter} notifications`
+                ? "You don't have any notifications yet." 
+                : `No ${filter} notifications found.`
               }
             </p>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredNotifications.map((notification, index) => (
-              <motion.div
-                key={notification._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}
-                className={`card cursor-pointer transition-all ${
-                  !notification.isRead 
-                    ? 'border-primary-500/50 bg-primary-500/5' 
-                    : 'hover:border-gray-700'
-                }`}
+        </GlassCard>
+      ) : (
+        <div className="space-y-3">
+          {filteredNotifications.map((notification, idx) => (
+            <motion.div
+              key={notification._id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: idx * 0.04 }}
+              onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}
+            >
+              <GlassCard 
+                hoverable={!notification.isRead}
+                className={`p-5 bg-dark-900/50 border border-white/5 transition-all
+                  ${!notification.isRead 
+                    ? 'border-primary-500/25 bg-primary-500/5 shadow-md shadow-primary-500/5' 
+                    : ''
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-dark-950/80 border border-white/5 rounded-xl flex items-center justify-center flex-shrink-0">
                     {getNotificationIcon(notification.type)}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-1">
-                      <h3 className="text-white font-semibold">{notification.title}</h3>
+                      <h4 className="text-white font-bold text-sm leading-tight">{notification.title}</h4>
                       {!notification.isRead && (
-                        <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-2"></div>
+                        <span className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1.5 shadow-sm shadow-primary-500/50"></span>
                       )}
                     </div>
-                    <p className="text-gray-400 text-sm mb-2">{notification.message}</p>
+                    <p className="text-gray-400 text-xs font-medium leading-relaxed mb-2">{notification.message}</p>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500">
+                      <span className="text-[10px] text-gray-500 font-bold">
                         {new Date(notification.createdAt).toLocaleString()}
-                      </p>
+                      </span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDelete(notification._id)
                         }}
-                        className="text-red-400 hover:text-red-300 text-sm"
+                        className="text-red-400 hover:text-red-300 text-xs p-1 cursor-pointer"
                       >
                         <FaTrash />
                       </button>
                     </div>
+
+                    {/* Notification attachments */}
+                    {notification.data?.rideId && (
+                      <Link
+                        to={`/ride/${notification.data.rideId}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-3.5"
+                      >
+                        <AnimatedButton variant="secondary" className="py-1.5 px-3 text-[10px] uppercase font-black tracking-wider">
+                          View Ride Details
+                        </AnimatedButton>
+                      </Link>
+                    )}
+                    {notification.data?.bookingId && (
+                      <Link
+                        to={`/bookings`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-3.5"
+                      >
+                        <AnimatedButton variant="secondary" className="py-1.5 px-3 text-[10px] uppercase font-black tracking-wider">
+                          View Reservations
+                        </AnimatedButton>
+                      </Link>
+                    )}
                   </div>
                 </div>
-
-                {/* Action Link */}
-                {notification.data?.rideId && (
-                  <Link
-                    to={`/ride/${notification.data.rideId}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-3 btn-outline text-sm inline-flex items-center gap-2"
-                  >
-                    View Ride →
-                  </Link>
-                )}
-                {notification.data?.bookingId && (
-                  <Link
-                    to={`/bookings`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-3 btn-outline text-sm inline-flex items-center gap-2"
-                  >
-                    View Booking →
-                  </Link>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+              </GlassCard>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -10,12 +10,27 @@ const { emitToUser } = require('../sockets/socketManager');
 // @access  Private (Passenger)
 exports.createBooking = async (req, res) => {
   try {
-    const { rideId, seatsBooked, pickupLocation, dropLocation } = req.body;
+    const { rideId, seatsBooked, seats, pickupLocation, dropLocation } = req.body;
+
+    if (!seats || !Array.isArray(seats) || seats.length !== parseInt(seatsBooked)) {
+      return res.status(400).json({
+        success: false,
+        message: `Please select exactly ${seatsBooked} seat(s) on the seat map`
+      });
+    }
 
     // Get ride
     const ride = await Ride.findById(rideId).populate('driver');
     if (!ride) {
       return res.status(404).json({ success: false, message: 'Ride not found' });
+    }
+
+    // Verify seat indices boundaries
+    const maxSeats = ride.totalSeats || 4;
+    for (const seatNum of seats) {
+      if (seatNum < 1 || seatNum > maxSeats) {
+        return res.status(400).json({ success: false, message: `Invalid seat number ${seatNum}` });
+      }
     }
 
     // Check availability
@@ -48,6 +63,19 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // DB-level race condition check: ensure selected seats are not already occupied
+    const duplicateBooking = await Booking.findOne({
+      ride: rideId,
+      status: { $in: ['pending', 'confirmed'] },
+      seats: { $in: seats }
+    });
+    if (duplicateBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more of the selected seats are already booked by another passenger'
+      });
+    }
+
     // Calculate carbon saved
     const carbonData = calculateCarbonEmission(
       ride.distance,
@@ -55,15 +83,28 @@ exports.createBooking = async (req, res) => {
       seatsBooked
     );
 
-    // Create booking
-    const totalAmount = seatsBooked * ride.pricePerSeat;
+    // Calculate segment-based pricing
+    let passengerPricePerSeat = ride.pricePerSeat;
+    if (pickupLocation?.coordinates?.lat && dropLocation?.coordinates?.lat && ride.routeCoordinates?.length > 0) {
+      const { getClosestPointOnRoute } = require('../services/rideMatchingService');
+      const pickupProj = getClosestPointOnRoute(pickupLocation.coordinates, ride.routeCoordinates);
+      const dropoffProj = getClosestPointOnRoute(dropLocation.coordinates, ride.routeCoordinates);
+      
+      if (pickupProj.index < dropoffProj.index) {
+        const overlap = Math.max(10, Math.min(100, Math.round(((dropoffProj.index - pickupProj.index) / ride.routeCoordinates.length) * 100)));
+        passengerPricePerSeat = Math.max(30, Math.round(ride.pricePerSeat * (overlap / 100)));
+      }
+    }
+
+    const totalAmount = seatsBooked * passengerPricePerSeat;
 
     const booking = await Booking.create({
       ride: rideId,
       passenger: req.user.id,
       driver: ride.driver._id,
       seatsBooked,
-      pricePerSeat: ride.pricePerSeat,
+      seats,
+      pricePerSeat: passengerPricePerSeat,
       totalAmount,
       pickupLocation: pickupLocation || ride.origin,
       dropLocation: dropLocation || ride.destination,
@@ -77,11 +118,24 @@ exports.createBooking = async (req, res) => {
     ride.bookings.push(booking._id);
     await ride.save();
 
+    // Release temporary locks for these seats
+    const SeatLock = require('../models/SeatLock');
+    await SeatLock.deleteMany({
+      ride: rideId,
+      seatNumber: { $in: seats }
+    });
+
+    // Notify other users of seat occupancy updates via socket
+    const io = require('../sockets/socketManager').getIO?.() || null;
+    if (io) {
+      io.to(rideId.toString()).emit('seatsOccupied', { rideId, seats });
+    }
+
     // Notify driver
     await Notification.create({
       user: ride.driver._id,
       title: '🎉 New Booking Request',
-      message: `${req.user.name} requested ${seatsBooked} seat(s) for your ride`,
+      message: `${req.user.name} requested seat(s) ${seats.join(', ')} for your ride`,
       type: 'booking_confirmed',
       data: { bookingId: booking._id, rideId }
     });
@@ -92,7 +146,8 @@ exports.createBooking = async (req, res) => {
         name: req.user.name,
         avatar: req.user.avatar
       },
-      seatsBooked
+      seatsBooked,
+      seats
     });
 
     const populatedBooking = await Booking.findById(booking._id)
@@ -283,6 +338,11 @@ exports.rejectBooking = async (req, res) => {
     ride.bookings = ride.bookings.filter(b => b.toString() !== booking._id.toString());
     await ride.save();
 
+    const io = require('../sockets/socketManager').getIO?.() || null;
+    if (io) {
+      io.to(booking.ride._id.toString()).emit('seatsReleased', { rideId: booking.ride._id });
+    }
+
     // Notify passenger
     await Notification.create({
       user: booking.passenger._id,
@@ -344,6 +404,11 @@ exports.cancelBooking = async (req, res) => {
     const ride = await Ride.findById(booking.ride._id);
     ride.availableSeats += booking.seatsBooked;
     await ride.save();
+
+    const io = require('../sockets/socketManager').getIO?.() || null;
+    if (io) {
+      io.to(booking.ride._id.toString()).emit('seatsReleased', { rideId: booking.ride._id });
+    }
 
     // Update user cancellation count
     const cancellingUser = await User.findById(req.user.id);

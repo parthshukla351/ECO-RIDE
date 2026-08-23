@@ -40,6 +40,7 @@ const userSchema = new mongoose.Schema({
     enum: ['male', 'female', 'other'],
     required: [true, 'Gender is required']
   },
+  profileCompleted: { type: Boolean, default: false },
 
   // Verification
   isVerified: { type: Boolean, default: false },
@@ -76,6 +77,19 @@ const userSchema = new mongoose.Schema({
     image: String
   },
   isDriverVerified: { type: Boolean, default: false },
+  driverVerificationStatus: {
+    type: String,
+    enum: ['NOT_STARTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED'],
+    default: 'NOT_STARTED'
+  },
+  vehicleVerificationStatus: {
+    type: String,
+    enum: ['NOT_STARTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED'],
+    default: 'NOT_STARTED'
+  },
+
+  // Wallet
+  walletBalance: { type: Number, default: 0 },
 
   // Eco Stats
   totalRides: { type: Number, default: 0 },

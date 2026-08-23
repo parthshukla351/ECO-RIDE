@@ -3,15 +3,56 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   FaCar, FaUsers, FaMapMarkerAlt, FaClock, FaLeaf,
-  FaEdit, FaTrash, FaPlay, FaStop, FaTimes
+  FaEdit, FaTrash, FaPlay, FaStop, FaTimes, FaRoute
 } from 'react-icons/fa'
+import GlassCard from '../components/ui/GlassCard'
+import AnimatedButton from '../components/ui/AnimatedButton'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { useSocket } from '../contexts/SocketContext'
 
 const MyRides = () => {
+  const { socket } = useSocket()
   const [rides, setRides] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+
+  // Geolocation watcher for active in_progress rides
+  useEffect(() => {
+    const activeRide = rides.find(r => r.status === 'in_progress')
+    if (!activeRide || !socket) return
+
+    socket.emit('joinRide', activeRide._id)
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+
+        // 1. Emit location update via WebSockets for real-time tracking
+        socket.emit('updateLocation', {
+          rideId: activeRide._id,
+          location
+        })
+
+        // 2. Persist to backend
+        try {
+          await api.post(`/rides/${activeRide._id}/location`, location)
+        } catch (err) {
+          console.warn('Persisting location failed:', err.message)
+        }
+      },
+      (err) => console.warn('Active drive location watch error:', err),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    )
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      socket.emit('leaveRide', activeRide._id)
+    }
+  }, [rides, socket])
 
   useEffect(() => {
     fetchRides()
@@ -65,226 +106,227 @@ const MyRides = () => {
   }
 
   const statusColors = {
-    scheduled: 'bg-blue-500/20 text-blue-400',
-    in_progress: 'bg-yellow-500/20 text-yellow-400',
-    completed: 'bg-green-500/20 text-green-400',
-    cancelled: 'bg-red-500/20 text-red-400'
+    scheduled: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    in_progress: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+    completed: 'bg-green-500/10 text-green-400 border border-green-500/20',
+    cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20'
   }
 
   return (
-    <div className="min-h-screen bg-white py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-black text-white mb-2">My Rides 🚗</h1>
-            <p className="text-gray-400">Manage your published rides</p>
-          </div>
-          <Link to="/driver/publish-ride" className="btn-primary">
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+      >
+        <div>
+          <h1 className="text-3xl font-black font-display text-white tracking-tight">My Rides 🚗</h1>
+          <p className="text-gray-400 text-sm font-medium mt-1">Configure and manage your published itineraries.</p>
+        </div>
+        <Link to="/driver/publish-ride">
+          <AnimatedButton variant="primary" className="text-xs uppercase tracking-wider font-bold">
             + Publish New Ride
-          </Link>
-        </div>
+          </AnimatedButton>
+        </Link>
+      </motion.div>
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { value: 'all', label: 'All Rides' },
-            { value: 'scheduled', label: 'Scheduled' },
-            { value: 'in_progress', label: 'In Progress' },
-            { value: 'completed', label: 'Completed' },
-            { value: 'cancelled', label: 'Cancelled' }
-          ].map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => setFilter(tab.value)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                filter === tab.value
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      {/* Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-white/5 scrollbar-thin">
+        {[
+          { value: 'all', label: 'All Rides' },
+          { value: 'scheduled', label: 'Scheduled' },
+          { value: 'in_progress', label: 'In Progress' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'cancelled', label: 'Cancelled' }
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setFilter(tab.value)}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap border
+              ${filter === tab.value
+                ? 'bg-primary-500/10 text-primary-400 border-primary-500/25 shadow-sm shadow-primary-500/5'
+                : 'bg-dark-900/40 text-gray-400 border-transparent hover:text-white'
               }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Rides List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          </div>
-        ) : rides.length === 0 ? (
-          <div className="card text-center py-12">
-            <FaCar className="text-gray-600 text-5xl mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No rides found</h3>
-            <p className="text-gray-400 mb-6">
+      {/* Rides List */}
+      {loading ? (
+        <div className="text-center py-16 space-y-4">
+          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Loading rides...</p>
+        </div>
+      ) : rides.length === 0 ? (
+        <GlassCard hoverable={false} className="text-center py-16 space-y-6 border-white/5 bg-dark-900/40">
+          <FaCar className="text-gray-600 text-5xl mx-auto opacity-35" />
+          <div>
+            <h3 className="text-xl font-bold text-white font-display">No Rides Found</h3>
+            <p className="text-gray-400 text-sm mt-1">
               {filter === 'all' 
-                ? "You haven't published any rides yet" 
-                : `No ${filter} rides`
+                ? "You haven't published any rides yet." 
+                : `No ${filter} rides published.`
               }
             </p>
-            <Link to="/driver/publish-ride" className="btn-primary inline-flex items-center gap-2">
-              + Publish Your First Ride
-            </Link>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {rides.map((ride, index) => (
-              <motion.div
-                key={ride._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="card hover:border-primary-500/50"
-              >
-                <div className="flex flex-col lg:flex-row gap-6">
-                  {/* Route Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[ride.status]}`}>
+          <Link to="/driver/publish-ride">
+            <AnimatedButton variant="primary" className="text-xs uppercase tracking-wider font-bold">
+              Publish Your First Itinerary
+            </AnimatedButton>
+          </Link>
+        </GlassCard>
+      ) : (
+        <div className="space-y-4">
+          {rides.map((ride, idx) => (
+            <motion.div
+              key={ride._id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: idx * 0.05 }}
+            >
+              <GlassCard hoverable={false} className="border-white/5 bg-dark-900/50 p-6">
+                <div className="flex flex-col lg:flex-row gap-6 justify-between lg:items-center">
+                  
+                  {/* Left: Ride details */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider border ${statusColors[ride.status]}`}>
                         {ride.status}
                       </span>
-                      <span className="text-gray-500 text-sm">
+                      <span className="text-gray-500 text-[10px] font-bold">
                         {new Date(ride.departureTime).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-3">
                       <div>
-                        <p className="text-gray-400 text-xs">From</p>
-                        <p className="text-white font-semibold">{ride.origin.city}</p>
+                        <span className="text-[9px] uppercase tracking-wider text-gray-500">From</span>
+                        <p className="text-white font-semibold text-sm">{ride.origin.city}</p>
                       </div>
-                      <FaMapMarkerAlt className="text-primary-400" />
+                      <FaRoute className="text-primary-400 text-xs mt-3" />
                       <div>
-                        <p className="text-gray-400 text-xs">To</p>
-                        <p className="text-white font-semibold">{ride.destination.city}</p>
+                        <span className="text-[9px] uppercase tracking-wider text-gray-500">To</span>
+                        <p className="text-white font-semibold text-sm">{ride.destination.city}</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <FaClock className="text-primary-400" />
+                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-400 pt-1">
+                      <span className="flex items-center gap-1">
+                        <FaClock className="text-primary-400 text-[10px]" />
                         {new Date(ride.departureTime).toLocaleTimeString('en-IN', {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FaUsers className="text-primary-400" />
-                        {ride.totalSeats - ride.availableSeats}/{ride.totalSeats} booked
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FaCar className="text-primary-400" />
-                        {ride.distance} km
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FaLeaf className="text-primary-400" />
-                        {ride.carbonSaved?.toFixed(2)} kg CO₂
-                      </div>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FaUsers className="text-primary-400 text-[10px]" />
+                        {ride.totalSeats - ride.availableSeats} of {ride.totalSeats} booked
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FaCar className="text-primary-400 text-[10px]" />
+                        {ride.distance} km distance
+                      </span>
+                      <span className="flex items-center gap-1 text-green-400">
+                        <FaLeaf className="text-[10px]" />
+                        {ride.carbonSaved?.toFixed(2)} kg CO₂ Offset
+                      </span>
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="flex lg:flex-col justify-between lg:justify-start gap-4">
-                    <div className="text-center lg:text-right">
-                      <p className="text-gray-400 text-xs mb-1">Price/Seat</p>
-                      <p className="text-2xl font-black text-primary-400">₹{ride.pricePerSeat}</p>
+                  {/* Middle: Potential Earnings */}
+                  <div className="flex lg:flex-col justify-between items-start lg:items-end gap-2 border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
+                    <div className="text-left lg:text-right">
+                      <span className="text-[9px] uppercase tracking-wider text-gray-500">Seat pricing</span>
+                      <p className="text-xl font-black text-primary-400 font-display">₹{ride.pricePerSeat}</p>
                     </div>
-                    <div className="text-center lg:text-right">
-                      <p className="text-gray-400 text-xs mb-1">Potential Earnings</p>
-                      <p className="text-lg font-bold text-white">
+
+                    <div className="text-left lg:text-right">
+                      <span className="text-[9px] uppercase tracking-wider text-gray-500">Booked value</span>
+                      <p className="text-sm font-bold text-white">
                         ₹{(ride.totalSeats - ride.availableSeats) * ride.pricePerSeat}
                       </p>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex lg:flex-col gap-2 justify-end">
+                  {/* Right: Action controllers */}
+                  <div className="flex flex-wrap lg:flex-col gap-2 border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
                     {ride.status === 'scheduled' && (
                       <>
-                        <button
+                        <AnimatedButton
                           onClick={() => handleStartRide(ride._id)}
-                          className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
-                          title="Start Ride"
+                          variant="primary"
+                          className="text-xs uppercase tracking-wider py-2.5 flex items-center gap-1.5"
                         >
-                          <FaPlay /> Start
-                        </button>
-                        <Link
-                          to={`/ride/${ride._id}`}
-                          className="btn-outline text-sm px-4 py-2 flex items-center gap-2"
-                        >
-                          <FaEdit /> View
-                        </Link>
-                        <button
+                          <FaPlay className="text-[9px]" /> Start Drive
+                        </AnimatedButton>
+                        <AnimatedButton
                           onClick={() => handleCancelRide(ride._id)}
-                          className="btn-outline text-sm px-4 py-2 flex items-center gap-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
-                          title="Cancel"
+                          variant="danger"
+                          className="text-xs uppercase tracking-wider py-2.5 flex items-center gap-1.5"
                         >
-                          <FaTimes />
-                        </button>
+                          <FaTimes className="text-[9px]" /> Cancel
+                        </AnimatedButton>
                       </>
                     )}
 
                     {ride.status === 'in_progress' && (
-                      <>
-                        <button
-                          onClick={() => handleEndRide(ride._id)}
-                          className="btn-primary text-sm px-4 py-2 flex items-center gap-2"
-                        >
-                          <FaStop /> End Ride
-                        </button>
-                        <Link
-                          to={`/ride/${ride._id}`}
-                          className="btn-outline text-sm px-4 py-2"
-                        >
-                          View Details
-                        </Link>
-                      </>
+                      <AnimatedButton
+                        onClick={() => handleEndRide(ride._id)}
+                        variant="primary"
+                        className="text-xs uppercase tracking-wider py-2.5 flex items-center gap-1.5"
+                      >
+                        <FaStop className="text-[9px]" /> End Drive
+                      </AnimatedButton>
                     )}
 
-                    {(ride.status === 'completed' || ride.status === 'cancelled') && (
-                      <Link
-                        to={`/ride/${ride._id}`}
-                        className="btn-outline text-sm px-4 py-2"
-                      >
-                        View Details
-                      </Link>
-                    )}
+                    <Link to={`/ride/${ride._id}`} className="w-full">
+                      <AnimatedButton variant="secondary" fullWidth className="text-xs uppercase tracking-wider py-2.5">
+                        Details
+                      </AnimatedButton>
+                    </Link>
                   </div>
+
                 </div>
 
-                {/* Bookings */}
+                {/* Bookings details list */}
                 {ride.bookings && ride.bookings.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <p className="text-sm text-gray-400 mb-2">
-                      {ride.bookings.length} booking{ride.bookings.length !== 1 ? 's' : ''}
+                  <div className="mt-5 pt-4 border-t border-white/5">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2.5">
+                      Roster: {ride.bookings.length} Passenger Reservation{ride.bookings.length !== 1 ? 's' : ''}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {ride.bookings.map((booking) => (
-                        <Link
+                        <div
                           key={booking._id}
-                          to={`/bookings/${booking._id}`}
-                          className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm"
+                          className="flex items-center gap-2.5 px-3 py-1.5 bg-dark-950/60 border border-white/5 rounded-xl text-xs"
                         >
                           <img
-                            src={booking.passenger?.avatar}
+                            src={booking.passenger?.avatar || 'https://res.cloudinary.com/demo/image/upload/v1/default-avatar.png'}
                             alt={booking.passenger?.name}
-                            className="w-6 h-6 rounded-full"
+                            className="w-5 h-5 rounded-full object-cover border border-white/10"
                           />
-                          <span className="text-white">{booking.passenger?.name}</span>
-                          <span className={`px-2 py-0.5 rounded text-xs ${statusColors[booking.status]}`}>
+                          <span className="text-white font-semibold">{booking.passenger?.name}</span>
+                          {booking.seats && booking.seats.length > 0 && (
+                            <span className="text-primary-400 font-bold text-[10px]">
+                              (Seat: {booking.seats.join(', ')})
+                            </span>
+                          )}
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${statusColors[booking.status]}`}>
                             {booking.status}
                           </span>
-                        </Link>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+              </GlassCard>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

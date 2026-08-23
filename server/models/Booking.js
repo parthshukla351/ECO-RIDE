@@ -17,6 +17,7 @@ const bookingSchema = new mongoose.Schema({
     required: true
   },
   seatsBooked: { type: Number, required: true, min: 1 },
+  seats: [{ type: Number }],
   pricePerSeat: { type: Number, required: true },
   totalAmount: { type: Number, required: true },
 
@@ -61,6 +62,27 @@ const bookingSchema = new mongoose.Schema({
 
   passengerRating: { type: Number, min: 1, max: 5 },
   driverRating: { type: Number, min: 1, max: 5 },
+
+  // New features tracking
+  isSharedRideCandidate: { type: Boolean, default: false },
+  passengerApprovalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'denied', 'none'],
+    default: 'none'
+  },
+  driverApprovalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'denied', 'none'],
+    default: 'none'
+  },
+  sharedRideAdjustment: { type: Number, default: 0 },
+  originalFare: { type: Number },
+  trafficDelaySeconds: { type: Number, default: 0 },
+  trafficCharge: { type: Number, default: 0 },
+  passengerLateMinutes: { type: Number, default: 0 },
+  passengerLateCharge: { type: Number, default: 0 },
+  driverArrivedAt: Date,
+  passengerArrivedAt: Date,
 
 }, { timestamps: true });
 

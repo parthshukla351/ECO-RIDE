@@ -27,9 +27,12 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || 'Something went wrong'
     
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
-      toast.error('Session expired. Please login again.')
+      const isAuthRequest = error.config?.url?.endsWith('/auth/login') || error.config?.url?.endsWith('/auth/register');
+      if (!isAuthRequest) {
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+        toast.error('Session expired. Please login again.')
+      }
     } else if (error.response?.status === 403) {
       toast.error('Access denied')
     } else if (error.response?.status >= 500) {

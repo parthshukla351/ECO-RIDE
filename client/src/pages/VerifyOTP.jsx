@@ -1,45 +1,37 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { FaEnvelope } from 'react-icons/fa'
-import { useAuth } from '../context/AuthContext'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FaEnvelope, FaArrowLeft } from 'react-icons/fa'
+import { useAuth } from '../contexts/AuthContext'
+import GlassCard from '../components/ui/GlassCard'
+import AnimatedButton from '../components/ui/AnimatedButton'
+import OTPInput from '../components/ui/OTPInput'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 
 const VerifyOTP = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [countdown, setCountdown] = useState(60)
-  const inputRefs = useRef([])
+  
   const { verifyOTP } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const userId = location.state?.userId
 
   useEffect(() => {
-    if (!userId) navigate('/register')
-    inputRefs.current[0]?.focus()
+    if (!userId) {
+      navigate('/register')
+      return
+    }
     
     const timer = setInterval(() => {
-      setCountdown(prev => prev > 0 ? prev - 1 : 0)
+      setCountdown(prev => (prev > 0 ? prev - 1 : 0))
     }, 1000)
     return () => clearInterval(timer)
-  }, [])
-
-  const handleChange = (index, value) => {
-    if (value.length > 1) return
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
-    if (value && index < 5) inputRefs.current[index + 1]?.focus()
-  }
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
+  }, [userId, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,95 +43,126 @@ const VerifyOTP = () => {
 
     setLoading(true)
     const result = await verifyOTP(userId, otpString)
-    setLoading(false)
-
-    if (result.success) navigate('/dashboard')
+    
+    if (result.success) {
+      setSuccess(true)
+      setTimeout(() => {
+        setLoading(false)
+        // Redirect newly verified users to onboarding to complete profile KYC!
+        navigate('/onboarding')
+      }, 1500)
+    } else {
+      setLoading(false)
+    }
   }
+
+  // Auto trigger verification once all 6 digits are filled
+  useEffect(() => {
+    const otpString = otp.join('')
+    if (otpString.length === 6 && !loading && !success) {
+      const pseudoEvent = { preventDefault: () => {} }
+      handleSubmit(pseudoEvent)
+    }
+  }, [otp])
 
   const handleResend = async () => {
     if (countdown > 0) return
     setResendLoading(true)
     try {
       await api.post('/auth/resend-otp', { userId })
-      toast.success('OTP resent!')
+      toast.success('A new OTP has been sent to your email!')
       setCountdown(60)
-    } catch {
-      toast.error('Failed to resend OTP')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to resend OTP')
+    } finally {
+      setResendLoading(false)
     }
-    setResendLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FaEnvelope className="text-primary-600 text-2xl" />
-          </div>
-          <h2 className="text-gray-900 text-2xl font-bold">Verify Your Email</h2>
-          <p className="text-gray-500 mt-2">We sent a 6-digit OTP to your email</p>
-        </div>
+    <div className="min-h-[75vh] flex flex-col items-center justify-center py-12 relative overflow-hidden">
+      {/* Decorative Blob */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-primary-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-        <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleSubmit}>
-            {/* OTP Inputs */}
-            <div className="flex gap-3 justify-center mb-6">
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={el => inputRefs.current[index] = el}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={e => handleChange(index, e.target.value.replace(/\D/, ''))}
-                  onKeyDown={e => handleKeyDown(index, e)}
-                  className={`w-12 h-12 text-center text-xl font-bold rounded-xl border-2 
-                    bg-gray-50 text-gray-900 transition-all
-                    ${digit ? 'border-primary-500' : 'border-gray-200'}
-                    focus:outline-none focus:border-primary-400`}
-                />
-              ))}
+      <div className="w-full max-w-md relative z-10">
+        <button
+          onClick={() => navigate('/register')}
+          className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-gray-500 hover:text-white transition-colors mb-6 group cursor-pointer"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Register
+        </button>
+
+        <GlassCard 
+          hoverable={false}
+          className="p-8 sm:p-10 border-white/10 shadow-2xl glow-green bg-dark-900/60"
+        >
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 bg-primary-500/10 text-primary-400 border border-primary-500/25 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl shadow-lg">
+              <FaEnvelope />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading || otp.join('').length !== 6}
-              className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold py-4 rounded-2xl transition-all mt-6 flex items-center justify-center gap-2 text-lg shadow-md"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Verifying...
-                </>
-              ) : (
-                'Verify OTP 🌱'
-              )}
-            </button>
-          </form>
-
-          <div className="mt-4 text-center">
-            <p className="text-gray-600 text-sm">
-              Didn't receive OTP?{' '}
-              {countdown > 0 ? (
-                <span className="text-gray-400">Resend in {countdown}s</span>
-              ) : (
-                <button
-                  onClick={handleResend}
-                  disabled={resendLoading}
-                  className="text-primary-600 hover:text-primary-500 font-medium"
-                >
-                  {resendLoading ? 'Sending...' : 'Resend OTP'}
-                </button>
-              )}
+            <h2 className="text-white text-2xl font-black font-display tracking-tight">Verify Your Email</h2>
+            <p className="text-gray-400 mt-2 text-xs max-w-xs mx-auto leading-relaxed font-semibold">
+              We have dispatched a 6-digit confirmation passcode to your email.
             </p>
           </div>
-        </div>
-      </motion.div>
+
+          <AnimatePresence mode="wait">
+            {!success ? (
+              <motion.div
+                key="otp-form-wrapper"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <form onSubmit={handleSubmit}>
+                  {/* Reuse high-fidelity OTPInput component */}
+                  <OTPInput value={otp} onChange={setOtp} />
+
+                  <AnimatedButton
+                    type="submit"
+                    variant="primary"
+                    disabled={loading || otp.join('').length !== 6}
+                    fullWidth
+                    className="py-3.5 font-bold uppercase tracking-wider text-xs"
+                  >
+                    {loading ? 'Verifying Code...' : 'Verify Code 🌱'}
+                  </AnimatedButton>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <p className="text-gray-500 text-xs font-semibold">
+                    Didn't receive the OTP?{' '}
+                    {countdown > 0 ? (
+                      <span className="text-primary-400 font-bold">Resend in {countdown}s</span>
+                    ) : (
+                      <button
+                        onClick={handleResend}
+                        disabled={resendLoading}
+                        className="text-primary-400 hover:text-primary-300 font-bold underline cursor-pointer bg-transparent border-none p-0 outline-none"
+                      >
+                        {resendLoading ? 'Sending...' : 'Resend Code'}
+                      </button>
+                    )}
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="otp-success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-6"
+              >
+                <div className="w-16 h-16 bg-primary-500/10 text-primary-400 border border-primary-500/30 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl shadow-lg glow-green animate-pulse">
+                  ✓
+                </div>
+                <h3 className="text-2xl font-black font-display text-white">Email Verified!</h3>
+                <p className="text-gray-400 mt-2 text-sm leading-relaxed">Verification complete. Launching onboarding profiles...</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </GlassCard>
+      </div>
     </div>
   )
 }

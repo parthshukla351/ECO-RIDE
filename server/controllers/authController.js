@@ -1,9 +1,10 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { sendTokenResponse } = require('../utils/generateToken');
-const { sendWelcomeEmail, sendOTPEmail } = require('../services/emailService');
+const { sendTokenResponse, generateAccessToken } = require('../utils/generateToken');
+const { sendWelcomeEmail, sendOTPEmail, sendResetOTPEmail } = require('../services/emailService');
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -73,8 +74,9 @@ exports.register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful! Please verify your email with the OTP sent.',
-      userId: user._id
+      message: `Registration successful! Please verify your email with the OTP sent. [DEV ONLY: Use OTP ${otp} to verify]`,
+      userId: user._id,
+      otp
     });
 
   } catch (error) {
@@ -149,7 +151,11 @@ exports.resendOTP = async (req, res) => {
 
     await sendOTPEmail(user, otp);
 
-    res.status(200).json({ success: true, message: 'OTP resent successfully' });
+    res.status(200).json({
+      success: true,
+      message: `OTP resent successfully! [DEV ONLY: Use OTP ${otp} to verify]`,
+      otp
+    });
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -161,7 +167,7 @@ exports.resendOTP = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -198,7 +204,7 @@ exports.login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
-    sendTokenResponse(user, 200, res, 'Login successful');
+    sendTokenResponse(user, 200, res, 'Login successful', rememberMe);
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -252,12 +258,13 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    await sendOTPEmail(user, otp);
+    await sendResetOTPEmail(user, otp);
 
     res.status(200).json({ 
       success: true, 
-      message: 'Password reset OTP sent to email',
-      userId: user._id
+      message: `Password reset OTP sent to email. [DEV ONLY: Use OTP ${otp} to reset]`,
+      userId: user._id,
+      otp
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -309,5 +316,62 @@ exports.changePassword = async (req, res) => {
     res.status(200).json({ success: true, message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Refresh Token
+// @route   POST /api/auth/refresh-token
+// @access  Public
+exports.refreshToken = async (req, res) => {
+  try {
+    let token = req.cookies?.refreshToken || req.body.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No refresh token provided. Please login again.'
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if user exists
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token owner not found.'
+      });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been banned.'
+      });
+    }
+
+    // Generate new access token
+    const accessToken = generateAccessToken(user._id);
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('token', accessToken, {
+      expires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
+    });
+
+    res.status(200).json({
+      success: true,
+      token: accessToken
+    });
+
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: 'Invalid or expired refresh token. Please login again.'
+    });
   }
 };

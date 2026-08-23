@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSocket } from '../../context/SocketContext'
+import { useSocket } from '../../contexts/SocketContext'
 import MapView from './MapView'
 import { FaCircle, FaCar, FaClock } from 'react-icons/fa'
 
