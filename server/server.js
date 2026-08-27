@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 const http = require('http');
 const cookieParser = require('cookie-parser');
 const { initSocket } = require('./sockets/socketManager');
-
+require('dotenv').config();
 dotenv.config();
 
 const app = express();
@@ -75,6 +75,7 @@ const seedFAQs = require('./utils/faqSeeder');
 const seedAgents = require('./utils/agentSeeder');
 
 mongoose.connect(process.env.MONGO_URI)
+
   .then(() => {
     console.log('✅ MongoDB Connected');
     seedFAQs();
