@@ -258,7 +258,7 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    await sendResetOTPEmail(user, otp);
+    sendResetOTPEmail(user, otp).catch(err => console.error('Email sending failed:', err.message));
 
     res.status(200).json({ 
       success: true, 
