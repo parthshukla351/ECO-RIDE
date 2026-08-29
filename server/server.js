@@ -104,6 +104,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.status(200).send('🌍 Eco-Ride Backend Server is Live!');
+});
+
 // =========================
 // ERROR HANDLER
 // =========================
