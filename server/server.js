@@ -7,13 +7,13 @@ const dotenv = require('dotenv');
 const http = require('http');
 const cookieParser = require('cookie-parser');
 const { initSocket } = require('./sockets/socketManager');
-require('dotenv').config();
+
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io (using the sockets/socketManager)
+// Initialize Socket.io
 initSocket(server);
 
 // Middleware
@@ -21,29 +21,59 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(cookieParser());
 
+// =========================
+// CORS CONFIGURATION
+// =========================
+
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  'https://eco-ride-xi.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
   'http://localhost:3000'
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+console.log('Allowed Origins:', allowedOrigins);
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests without origin
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Allow Vercel deployment URLs
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+
+      console.log('Blocked by CORS:', origin);
+
+      return callback(
+        new Error('Not allowed by CORS')
+      );
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization'
+    ]
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// =========================
+// ROUTES
+// =========================
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/rides', require('./routes/rideRoutes'));
@@ -58,30 +88,47 @@ app.use('/api/safety', require('./routes/safetyRoutes'));
 app.use('/api/agents', require('./routes/agentRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
-// Health Check
+// =========================
+// HEALTH CHECK
+// =========================
+
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Eco Ride Sharing API is running',
     timestamp: new Date().toISOString()
   });
 });
 
-// Error Handler
+// =========================
+// ERROR HANDLER
+// =========================
+
 app.use(require('./middleware/errorHandler'));
 
-// Database Connection
+// =========================
+// DATABASE CONNECTION
+// =========================
+
 const seedFAQs = require('./utils/faqSeeder');
 const seedAgents = require('./utils/agentSeeder');
 
-mongoose.connect(process.env.MONGO_URI)
-
-  .then(() => {
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(async () => {
     console.log('✅ MongoDB Connected');
-    seedFAQs();
-    seedAgents();
-    server.listen(process.env.PORT || 5000, () => {
-      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
+
+    try {
+      await seedFAQs();
+      await seedAgents();
+    } catch (error) {
+      console.error('⚠️ Seeding error:', error.message);
+    }
+
+    const PORT = process.env.PORT || 5000;
+
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
