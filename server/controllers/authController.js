@@ -59,7 +59,7 @@ exports.register = async (req, res) => {
 
     // Send OTP email (don't block registration if email fails)
     try {
-      await sendOTPEmail(user, otp);
+      sendOTPEmail(user, otp).catch(err => console.error('Email failed:', err.message));
     } catch (emailError) {
       console.warn(`⚠️ Email sending failed: ${emailError.message}`);
       console.log(`📱 [DEV] Use OTP: ${otp} to verify`);
@@ -111,7 +111,7 @@ exports.verifyOTP = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Send welcome email
-    await sendWelcomeEmail(user);
+    sendWelcomeEmail(user).catch(err => console.error('Email failed:', err.message));
 
     // Create welcome notification
     await Notification.create({
@@ -149,7 +149,7 @@ exports.resendOTP = async (req, res) => {
     user.otpExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    await sendOTPEmail(user, otp);
+    sendOTPEmail(user, otp).catch(err => console.error('Email failed:', err.message));
 
     res.status(200).json({
       success: true,
