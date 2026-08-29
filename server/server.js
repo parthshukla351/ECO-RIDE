@@ -26,7 +26,7 @@ app.use(cookieParser());
 // =========================
 
 const allowedOrigins = [
-  process.env.CLIENT_URL,
+  '',
   'https://eco-ride-xi.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
