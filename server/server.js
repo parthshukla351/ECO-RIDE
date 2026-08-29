@@ -17,7 +17,11 @@ const server = http.createServer(app);
 initSocket(server);
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false
+  })
+);
 app.use(morgan('dev'));
 app.use(cookieParser());
 
