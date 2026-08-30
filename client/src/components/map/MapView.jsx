@@ -90,9 +90,8 @@ const MapView = ({
       scrollWheelZoom: interactive,
       attributionControl: false
     })
-
-    // CartoDB Dark Matter tiles - gorgeous dark UI matching index.css
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Standard OpenStreetMap tiles - completely free and no API watermark
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19
     }).addTo(map)
 
