@@ -1,12 +1,13 @@
 const axios = require('axios');
 
 const sendEmail = async ({ to, subject, html }) => {
-  const apiKey = (process.env.RESEND_API_KEY || '').trim().replace(/^["']|["']$/g, '');
-  const fromEmail = (process.env.RESEND_FROM || 'EcoRide AI <onboarding@resend.dev>').trim().replace(/^["']|["']$/g, '');
+  const serviceId = (process.env.EMAILJS_SERVICE_ID || '').trim().replace(/^["']|["']$/g, '');
+  const templateId = (process.env.EMAILJS_TEMPLATE_ID || '').trim().replace(/^["']|["']$/g, '');
+  const publicKey = (process.env.EMAILJS_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '');
 
-  if (!apiKey) {
+  if (!serviceId || !templateId || !publicKey) {
     console.log('\n==================================================');
-    console.log(`📧 [DEV EMAIL MOCK] - RESEND_API_KEY NOT CONFIGURED IN .ENV`);
+    console.log(`📧 [DEV EMAIL MOCK] - EMAILJS CONFIGURATION MISSING IN .ENV`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`HTML: ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}`);
@@ -15,29 +16,45 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 
   try {
+    // Extract 6-digit OTP dynamically from subject or HTML body
+    let extractedOtp = '';
+    const match = subject.match(/\d{6}/);
+    if (match) {
+      extractedOtp = match[0];
+    } else {
+      const htmlMatch = html.match(/\b\d{6}\b/);
+      if (htmlMatch) {
+        extractedOtp = htmlMatch[0];
+      }
+    }
+
     const response = await axios.post(
-      'https://api.resend.com/emails',
+      'https://api.emailjs.com/api/v1.0/email/send',
       {
-        from: fromEmail,
-        to: [to],
-        subject: subject,
-        html: html
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: publicKey,
+        template_params: {
+          to_email: to,
+          otp: extractedOtp || '123456',
+          subject: subject,
+          message_html: html
+        }
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         }
       }
     );
-    console.log(`📧 Email sent successfully via Resend API: ${response.data.id}`);
+    console.log('📧 Email sent successfully via EmailJS HTTP API');
     return true;
   } catch (error) {
     const errorDetails = error.response?.data || error.message;
-    console.error('❌ Resend API error:', errorDetails);
+    console.error('❌ EmailJS API error:', errorDetails);
     
     console.log('\n==================================================');
-    console.log(`📧 [DEV EMAIL FALLBACK - RESEND API FAILED]`);
+    console.log(`📧 [DEV EMAIL FALLBACK - EMAILJS FAILED]`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`HTML: ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}`);
