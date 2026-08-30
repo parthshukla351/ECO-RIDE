@@ -1,51 +1,12 @@
-const nodemailer = require('nodemailer');
-
-let transporter = null;
-let cachedUser = null;
-let cachedPass = null;
-
-const getTransporter = () => {
-  const user = (process.env.EMAIL_USER || '').trim().replace(/^["']|["']$/g, '');
-  const pass = (process.env.EMAIL_PASS || '').trim().replace(/^["']|["']$/g, '');
-  const host = (process.env.EMAIL_HOST || 'smtp.gmail.com').trim().replace(/^["']|["']$/g, '');
-  const port = parseInt((process.env.EMAIL_PORT || '587').trim().replace(/^["']|["']$/g, '')) || 587;
-
-  if (!transporter || cachedUser !== user || cachedPass !== pass) {
-    cachedUser = user;
-    cachedPass = pass;
-    const isGmail = host === 'smtp.gmail.com' || user.endsWith('@gmail.com');
-    
-    if (isGmail) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user, pass }
-      });
-    } else {
-      transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: { user, pass }
-      });
-    }
-  }
-  return transporter;
-};
+const axios = require('axios');
 
 const sendEmail = async ({ to, subject, html }) => {
-  const user = (process.env.EMAIL_USER || '').trim().replace(/^["']|["']$/g, '');
-  const pass = (process.env.EMAIL_PASS || '').trim().replace(/^["']|["']$/g, '');
-  const from = (process.env.EMAIL_FROM || '').trim().replace(/^["']|["']$/g, '');
+  const apiKey = (process.env.RESEND_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+  const fromEmail = (process.env.RESEND_FROM || 'EcoRide AI <onboarding@resend.dev>').trim().replace(/^["']|["']$/g, '');
 
-  const isEmailConfigured = 
-    user && 
-    user !== 'your_email@gmail.com' &&
-    pass &&
-    pass !== 'your_app_password';
-
-  if (!isEmailConfigured) {
+  if (!apiKey) {
     console.log('\n==================================================');
-    console.log(`📧 [DEV EMAIL MOCK] - SMTP NOT CONFIGURED IN .ENV`);
+    console.log(`📧 [DEV EMAIL MOCK] - RESEND_API_KEY NOT CONFIGURED IN .ENV`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`HTML: ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}`);
@@ -54,28 +15,29 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 
   try {
-    const plainText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    const mailOptions = {
-      from: from || `"EcoRide AI Support" <${user}>`,
-      to,
-      subject,
-      text: plainText,
-      html,
-      headers: {
-        'X-Priority': '1 (Highest)',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'High'
+    const response = await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from: fromEmail,
+        to: [to],
+        subject: subject,
+        html: html
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
       }
-    };
-    
-    const mailTransporter = getTransporter();
-    const info = await mailTransporter.sendMail(mailOptions);
-    console.log(`📧 Email sent: ${info.messageId}`);
+    );
+    console.log(`📧 Email sent successfully via Resend API: ${response.data.id}`);
     return true;
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    const errorDetails = error.response?.data || error.message;
+    console.error('❌ Resend API error:', errorDetails);
+    
     console.log('\n==================================================');
-    console.log(`📧 [DEV EMAIL FALLBACK - SMTP FAILED]`);
+    console.log(`📧 [DEV EMAIL FALLBACK - RESEND API FAILED]`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
     console.log(`HTML: ${html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}`);
