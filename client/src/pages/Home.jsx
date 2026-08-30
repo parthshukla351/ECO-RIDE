@@ -50,7 +50,7 @@ const Home = () => {
             <FaBolt className="text-[10px] animate-pulse" /> Intelligent shared mobility
           </span>
           <h1 className="text-5xl md:text-7xl font-black font-display text-white tracking-tight leading-none">
-            Begin Your <span className="text-gradient">Zero Carbon</span> Commute
+            share your<span className="text-gradient">ride save</span> your money
           </h1>
           <p className="text-gray-400 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
             Connect with verified drivers. Match coordinates, optimize routes, and reduce emissions on an AI-powered shared transit ecosystem.
@@ -173,7 +173,7 @@ const Home = () => {
       {/* Feature Cards Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <h3 className="text-3xl font-black font-display text-white mb-10 tracking-tight text-center sm:text-left">
-          Travel Smarter, Greener
+          Travel Smarter, Greener,Begin Your Zero Carbon Commute
         </h3>
 
         <motion.div 
