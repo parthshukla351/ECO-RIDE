@@ -12,7 +12,8 @@ const MapView = ({
   interactive = true,
   markers = [],
   onMapClick,
-  onRouteCalculated // Callback: ({ distance, duration })
+  onRouteCalculated, // Callback: ({ distance, duration })
+  routeCoordinates
 }) => {
   const mapContainerRef = useRef(null)
   const [useGoogleMaps, setUseGoogleMaps] = useState(false)
@@ -198,82 +199,93 @@ const MapView = ({
         leafletMarkersRef.current.push(marker)
       }
     })
+    // Draw routing
+    if (showRoute) {
+      if (routeCoordinates && routeCoordinates.length > 0) {
+        const polylineCoordinates = routeCoordinates.map(coord => [coord.lat, coord.lng])
+        const polyline = L.polyline(polylineCoordinates, {
+          color: '#10b981', // green route line
+          weight: 4,
+          opacity: 0.8
+        }).addTo(map)
 
-    // Draw routing via OSRM Engine
-    if (showRoute && origin?.coordinates && destination?.coordinates) {
-      const o = origin.coordinates
-      const d = destination.coordinates
+        leafletRouteRef.current = polyline
+        map.fitBounds(polyline.getBounds(), { padding: [40, 40] })
+      } else if (origin?.coordinates && destination?.coordinates) {
+        const o = origin.coordinates
+        const d = destination.coordinates
 
-      fetch(`https://router.project-osrm.org/route/v1/driving/${o.lng},${o.lat};${d.lng},${d.lat}?overview=full&geometries=geojson`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0]
-            const polylineCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]])
-            
-            const polyline = L.polyline(polylineCoordinates, {
+        fetch(`https://router.project-osrm.org/route/v1/driving/${o.lng},${o.lat};${d.lng},${d.lat}?overview=full&geometries=geojson`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.routes && data.routes.length > 0) {
+              const route = data.routes[0]
+              const polylineCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]])
+              
+              const polyline = L.polyline(polylineCoordinates, {
+                color: '#10b981',
+                weight: 4,
+                opacity: 0.8
+              }).addTo(map)
+
+              leafletRouteRef.current = polyline
+              
+              // Adjust bounds to show entire route
+              map.fitBounds(polyline.getBounds(), { padding: [40, 40] })
+
+              const encodeVal = (val) => {
+                val = val < 0 ? ~(val << 1) : val << 1;
+                let resStr = '';
+                while (val >= 0x20) {
+                  resStr += String.fromCharCode((0x20 | (val & 0x1f)) + 63);
+                  val >>= 5;
+                }
+                resStr += String.fromCharCode(val + 63);
+                return resStr;
+              };
+
+              const encodePolylineCoords = (coordsList) => {
+                let resStr = '';
+                let prevLat = 0, prevLng = 0;
+                for (let coord of coordsList) {
+                  const lat = Math.round(coord[0] * 1e5);
+                  const lng = Math.round(coord[1] * 1e5);
+                  resStr += encodeVal(lat - prevLat) + encodeVal(lng - prevLng);
+                  prevLat = lat;
+                  prevLng = lng;
+                }
+                return resStr;
+              };
+
+              const encoded = encodePolylineCoords(polylineCoordinates);
+
+              if (onRouteCalculated) {
+                onRouteCalculated({
+                  distance: (route.distance / 1000).toFixed(1), // in km
+                  duration: Math.round(route.duration / 60), // in minutes
+                  routePolyline: encoded
+                })
+              }
+            }
+          })
+          .catch(err => {
+            console.error('OSRM Routing failed, drawing straight line:', err)
+            const polyline = L.polyline([
+              [o.lat, o.lng],
+              [d.lat, d.lng]
+            ], {
               color: '#10b981',
-              weight: 4,
+              weight: 3,
+              dashArray: '5, 5',
               opacity: 0.8
             }).addTo(map)
-
             leafletRouteRef.current = polyline
-            
-            // Adjust bounds to show entire route
-            map.fitBounds(polyline.getBounds(), { padding: [40, 40] })
-
-            const encodeVal = (val) => {
-              val = val < 0 ? ~(val << 1) : val << 1;
-              let resStr = '';
-              while (val >= 0x20) {
-                resStr += String.fromCharCode((0x20 | (val & 0x1f)) + 63);
-                val >>= 5;
-              }
-              resStr += String.fromCharCode(val + 63);
-              return resStr;
-            };
-
-            const encodePolylineCoords = (coordsList) => {
-              let resStr = '';
-              let prevLat = 0, prevLng = 0;
-              for (let coord of coordsList) {
-                const lat = Math.round(coord[0] * 1e5);
-                const lng = Math.round(coord[1] * 1e5);
-                resStr += encodeVal(lat - prevLat) + encodeVal(lng - prevLng);
-                prevLat = lat;
-                prevLng = lng;
-              }
-              return resStr;
-            };
-
-            const encoded = encodePolylineCoords(polylineCoordinates);
-
-            if (onRouteCalculated) {
-              onRouteCalculated({
-                distance: (route.distance / 1000).toFixed(1), // in km
-                duration: Math.round(route.duration / 60), // in minutes
-                routePolyline: encoded
-              })
-            }
-          }
-        })
-        .catch(err => {
-          console.error('OSRM Routing failed, drawing straight line:', err)
-          const polyline = L.polyline([
-            [o.lat, o.lng],
-            [d.lat, d.lng]
-          ], {
-            color: '#10b981',
-            weight: 3,
-            dashArray: '5, 5',
-            opacity: 0.8
-          }).addTo(map)
-          leafletRouteRef.current = polyline
-        })
+          })
+      }
     } else if (leafletMarkersRef.current.length > 0) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 })
     }
-  }, [origin, destination, currentLocation, markers, showRoute, onRouteCalculated])
+  }, [origin, destination, currentLocation, markers, showRoute, onRouteCalculated, routeCoordinates])
 
   // 5. Initialize Google Map
   const initGoogleMap = () => {
@@ -397,48 +409,64 @@ const MapView = ({
         strokeWeight: 1
       })
     }
-
-    // Draw Google directions route
-    if (showRoute && origin?.coordinates && destination?.coordinates) {
-      const directionsService = new window.google.maps.DirectionsService()
-      const directionsRenderer = new window.google.maps.DirectionsRenderer({
-        map,
-        suppressMarkers: true,
-        polylineOptions: {
+    // Draw directions route
+    if (showRoute) {
+      if (routeCoordinates && routeCoordinates.length > 0) {
+        const path = routeCoordinates.map(coord => new window.google.maps.LatLng(coord.lat, coord.lng))
+        const polyline = new window.google.maps.Polyline({
+          path: path,
+          geodesic: true,
           strokeColor: '#10b981',
-          strokeWeight: 4,
-          strokeOpacity: 0.8
-        }
-      })
+          strokeOpacity: 0.8,
+          strokeWeight: 4
+        })
+        polyline.setMap(map)
+        googleRouteRendererRef.current = polyline
 
-      googleRouteRendererRef.current = directionsRenderer
+        const bounds = new window.google.maps.LatLngBounds()
+        path.forEach(latLng => bounds.extend(latLng))
+        map.fitBounds(bounds)
+      } else if (origin?.coordinates && destination?.coordinates) {
+        const directionsService = new window.google.maps.DirectionsService()
+        const directionsRenderer = new window.google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#10b981',
+            strokeWeight: 4,
+            strokeOpacity: 0.8
+          }
+        })
 
-      directionsService.route(
-        {
-          origin: new window.google.maps.LatLng(origin.coordinates.lat, origin.coordinates.lng),
-          destination: new window.google.maps.LatLng(destination.coordinates.lat, destination.coordinates.lng),
-          travelMode: window.google.maps.TravelMode.DRIVING
-        },
-        (response, status) => {
-          if (status === 'OK') {
-            directionsRenderer.setDirections(response)
-            const route = response.routes[0].legs[0]
-            const polyline = response.routes[0].overview_polyline
-            
-            if (onRouteCalculated) {
-              onRouteCalculated({
-                distance: (route.distance.value / 1000).toFixed(1),
-                duration: Math.round(route.duration.value / 60),
-                routePolyline: polyline
-              })
+        googleRouteRendererRef.current = directionsRenderer
+
+        directionsService.route(
+          {
+            origin: new window.google.maps.LatLng(origin.coordinates.lat, origin.coordinates.lng),
+            destination: new window.google.maps.LatLng(destination.coordinates.lat, destination.coordinates.lng),
+            travelMode: window.google.maps.TravelMode.DRIVING
+          },
+          (response, status) => {
+            if (status === 'OK') {
+              directionsRenderer.setDirections(response)
+              const route = response.routes[0].legs[0]
+              const polyline = response.routes[0].overview_polyline
+              
+              if (onRouteCalculated) {
+                onRouteCalculated({
+                  distance: (route.distance.value / 1000).toFixed(1),
+                  duration: Math.round(route.duration.value / 60),
+                  routePolyline: polyline
+                })
+              }
             }
           }
-        }
-      )
+        )
+      }
     } else if (googleMarkersRef.current.length > 0) {
       map.fitBounds(bounds)
     }
-  }, [origin, destination, currentLocation, markers, showRoute, onRouteCalculated])
+  }, [origin, destination, currentLocation, markers, showRoute, onRouteCalculated, routeCoordinates])
 
   // Hook trigger sync
   useEffect(() => {

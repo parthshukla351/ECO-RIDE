@@ -224,8 +224,8 @@ const RideDetails = () => {
                   height="100%"
                   showRoute={true}
                   interactive={true}
-                />
-              </div>
+                  routeCoordinates={ride.routeCoordinates}
+                />              </div>
             )}
           </GlassCard>
 
@@ -320,6 +320,7 @@ const RideDetails = () => {
                     height="100%"
                     showRoute={true}
                     interactive={true}
+                    routeCoordinates={ride.routeCoordinates}
                     markers={[
                       ...(searchParams.get('originLat') ? [{
                         coordinates: {
@@ -338,8 +339,7 @@ const RideDetails = () => {
                         color: 'red'
                       }] : [])
                     ]}
-                  />
-                </div>
+                  />                </div>
                 {/* Dynamically detected intermediate waypoints */}
                 {ride.intermediatePlaces && ride.intermediatePlaces.length > 0 && (
                   <div className="mt-4">

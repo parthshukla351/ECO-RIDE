@@ -709,12 +709,12 @@ const SearchRide = () => {
                   height="100%"
                   showRoute={true}
                   interactive={true}
+                  routeCoordinates={activeRide?.routeCoordinates || rides[0]?.routeCoordinates}
                   markers={[
                     ...(searchOriginCoords ? [{ coordinates: searchOriginCoords, label: 'Your Pickup', color: 'green' }] : []),
                     ...(searchDestinationCoords ? [{ coordinates: searchDestinationCoords, label: 'Your Dropoff', color: 'red' }] : [])
                   ]}
-                />
-              </div>
+                />              </div>
             </GlassCard>
           </div>
         </div>
