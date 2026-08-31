@@ -41,7 +41,8 @@ const SearchRide = () => {
   const [smartQuery, setSmartQuery] = useState('')
   const [searchOriginCoords, setSearchOriginCoords] = useState(null)
   const [searchDestinationCoords, setSearchDestinationCoords] = useState(null)
-
+  const [customQuote, setCustomQuote] = useState(null)
+  const [requestingOnDemand, setRequestingOnDemand] = useState(false)
   useEffect(() => {
     const initGeocodeAndSearch = async () => {
       const orig = searchParams.get('origin')
@@ -204,11 +205,51 @@ const SearchRide = () => {
         const { data } = await api.get(`/rides/search?${params.toString()}`)
         results = data.rides
       }
-
       setRides(results)
       
+      // Calculate custom on-demand quote
+      const originName = filters.origin || (searchMode === 'smart' && smartQuery.split(' to ')[0]);
+      const destName = filters.destination || (searchMode === 'smart' && smartQuery.split(' to ')[1]);
+
+      let qOriginCoords = activeOriginCoords || searchOriginCoords;
+      let qDestCoords = activeDestCoords || searchDestinationCoords;
+
+      if (!qOriginCoords && originName) {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(originName)}&countrycodes=in&limit=1`, {
+            headers: { 'User-Agent': 'EcoRide-App-Phase2' }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data[0]) {
+              qOriginCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+              setSearchOriginCoords(qOriginCoords);
+            }
+          }
+        } catch (err) {}
+      }
+
+      if (!qDestCoords && destName) {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(destName)}&countrycodes=in&limit=1`, {
+            headers: { 'User-Agent': 'EcoRide-App-Phase2' }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data[0]) {
+              qDestCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+              setSearchDestinationCoords(qDestCoords);
+            }
+          }
+        } catch (err) {}
+      }
+
+      if (qOriginCoords && qDestCoords && originName && destName) {
+        await fetchCustomRouteQuote(qOriginCoords, qDestCoords, originName, destName);
+      }
+
       if (results.length === 0) {
-        toast('No rides found matching filters.', { icon: '🔍' })
+        toast('No scheduled rides found. Showing direct quote.', { icon: '🔍' })
       } else {
         setActiveRide(results[0])
       }
@@ -218,6 +259,97 @@ const SearchRide = () => {
       setLoading(false)
     }
   }
+
+  const fetchCustomRouteQuote = async (originCoords, destCoords, originName, destName) => {
+    if (!originCoords || !destCoords) return;
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${originCoords.lng},${originCoords.lat};${destCoords.lng},${destCoords.lat}?overview=full&geometries=geojson`)
+      if (!res.ok) throw new Error('OSRM routing request failed')
+      const data = await res.json()
+      
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0]
+        const distanceKm = parseFloat((route.distance / 1000).toFixed(1))
+        const durationMins = Math.round(route.duration / 60)
+        const polylineCoords = route.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }))
+
+        const encodeVal = (val) => {
+          val = val < 0 ? ~(val << 1) : val << 1;
+          let resStr = '';
+          while (val >= 0x20) {
+            resStr += String.fromCharCode((0x20 | (val & 0x1f)) + 63);
+            val >>= 5;
+          }
+          resStr += String.fromCharCode(val + 63);
+          return resStr;
+        };
+
+        let encoded = '';
+        let prevLat = 0, prevLng = 0;
+        for (let coord of polylineCoords) {
+          const lat = Math.round(coord.lat * 1e5);
+          const lng = Math.round(coord.lng * 1e5);
+          encoded += encodeVal(lat - prevLat) + encodeVal(lng - prevLng);
+          prevLat = lat;
+          prevLng = lng;
+        }
+
+        const baseRatePerKm = 12
+        const baseFare = Math.round(distanceKm * baseRatePerKm)
+        const platformFee = 15
+        const gst = Math.round((baseFare + platformFee) * 0.05)
+        const estimatedTotal = baseFare + platformFee + gst
+
+        setCustomQuote({
+          origin: {
+            address: originName || 'Pickup Location',
+            city: originName.split(',')[0] || 'Pickup City',
+            coordinates: originCoords
+          },
+          destination: {
+            address: destName || 'Destination Location',
+            city: destName.split(',')[0] || 'Destination City',
+            coordinates: destCoords
+          },
+          distance: distanceKm,
+          duration: durationMins,
+          routePolyline: encoded,
+          routeCoordinates: polylineCoords,
+          baseRatePerKm,
+          baseFare,
+          platformFee,
+          gst,
+          estimatedTotal
+        })
+      }
+    } catch (err) {
+      console.warn('Failed to fetch custom route details:', err)
+      setCustomQuote(null)
+    }
+  }
+
+  const handleBookOnDemand = async () => {
+    if (!customQuote) return;
+    setRequestingOnDemand(true);
+    try {
+      const { data } = await api.post('/ondemand/request', {
+        origin: customQuote.origin,
+        destination: customQuote.destination,
+        distance: customQuote.distance,
+        duration: customQuote.duration,
+        routePolyline: customQuote.routePolyline,
+        routeCoordinates: customQuote.routeCoordinates
+      });
+      if (data.success) {
+        toast.success('🚗 Custom ride request broadcasted to nearby drivers!');
+        navigate(`/tracking/${data.request._id}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create request');
+    } finally {
+      setRequestingOnDemand(false);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -466,26 +598,115 @@ const SearchRide = () => {
           <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest">Searching verified rides...</p>
         </div>
+
       ) : rides.length === 0 ? (
-        <GlassCard hoverable={false} className="text-center py-16 space-y-6 border-white/5 bg-dark-900/40">
-          <FaCar className="text-gray-600 text-5xl mx-auto opacity-35" />
-          <div>
-            <h3 className="text-xl font-bold text-white font-display">No Available Rides Found</h3>
-            <p className="text-gray-400 text-sm mt-1">Try relaxing your search parameters or check back later.</p>
-          </div>
-          <AnimatedButton
-            onClick={() => setFilters({
-              ...filters,
-              vehicleType: '',
-              maxPrice: '',
-              womenOnly: false
-            })}
-            variant="secondary"
-            className="text-xs uppercase tracking-wider"
-          >
-            Reset Filters
-          </AnimatedButton>
-        </GlassCard>
+        <div className="space-y-6">
+          {customQuote ? (
+            <GlassCard hoverable={false} className="border-white/5 bg-dark-900/40 p-6 space-y-6">
+              <div className="flex flex-col lg:flex-row gap-8">
+                {/* Quote details */}
+                <div className="flex-1 space-y-5">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-primary-500/10 border border-primary-500/20 text-primary-400">
+                      Direct On-Demand Quote
+                    </span>
+                    <h3 className="text-xl font-bold text-white font-display mt-2">No Scheduled Rides? Book Direct!</h3>
+                    <p className="text-gray-400 text-xs mt-1">We can broadcast your trip to nearby drivers right away.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="text-[9px] uppercase tracking-wider text-gray-500">From</span>
+                        <p className="text-white font-semibold text-sm">{customQuote.origin.address}</p>
+                      </div>
+                      <FaRoute className="text-primary-400 text-xs mt-3 animate-pulse" />
+                      <div>
+                        <span className="text-[9px] uppercase tracking-wider text-gray-500">To</span>
+                        <p className="text-white font-semibold text-sm">{customQuote.destination.address}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5 text-center">
+                    <div>
+                      <FaRoute className="text-primary-400 text-lg mx-auto mb-1.5" />
+                      <p className="text-white font-black text-lg">{customQuote.distance} km</p>
+                      <p className="text-gray-500 text-[10px] font-bold">ROUTE DISTANCE</p>
+                    </div>
+                    <div>
+                      <FaClock className="text-primary-400 text-lg mx-auto mb-1.5" />
+                      <p className="text-white font-black text-lg">{customQuote.duration} min</p>
+                      <p className="text-gray-500 text-[10px] font-bold">ESTIMATED TIME</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 py-3 border-t border-b border-white/5 text-xs font-semibold text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Base Rate (₹12/km):</span>
+                      <span className="text-white">₹{customQuote.baseFare}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Platform Fee:</span>
+                      <span className="text-white">+₹{customQuote.platformFee}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>GST (5%):</span>
+                      <span className="text-white">+₹{customQuote.gst}</span>
+                    </div>
+                    <div className="border-t border-white/5 my-1.5"></div>
+                    <div className="flex justify-between text-gray-300 font-bold">
+                      <span>TOTAL EST. FARE:</span>
+                      <span className="text-primary-400 font-black text-sm">₹{customQuote.estimatedTotal}</span>
+                    </div>
+                  </div>
+
+                  <AnimatedButton
+                    onClick={handleBookOnDemand}
+                    disabled={requestingOnDemand}
+                    variant="primary"
+                    fullWidth
+                    className="py-3.5 text-xs font-black uppercase tracking-wider"
+                  >
+                    {requestingOnDemand ? 'Requesting...' : 'Request Direct On-Demand Ride 🌱'}
+                  </AnimatedButton>
+                </div>
+
+                {/* Inline map */}
+                <div className="w-full lg:w-[400px] h-[320px] rounded-2xl border border-white/5 overflow-hidden bg-dark-900/20">
+                  <MapView
+                    origin={customQuote.origin}
+                    destination={customQuote.destination}
+                    height="100%"
+                    showRoute={true}
+                    interactive={true}
+                    routeCoordinates={customQuote.routeCoordinates}
+                  />
+                </div>
+              </div>
+            </GlassCard>
+          ) : (
+            <GlassCard hoverable={false} className="text-center py-16 space-y-6 border-white/5 bg-dark-900/40">
+              <FaCar className="text-gray-600 text-5xl mx-auto opacity-35" />
+              <div>
+                <h3 className="text-xl font-bold text-white font-display">No Available Rides Found</h3>
+                <p className="text-gray-400 text-sm mt-1">Try relaxing your search parameters or check back later.</p>
+              </div>
+              <AnimatedButton
+                onClick={() => setFilters({
+                  ...filters,
+                  vehicleType: '',
+                  maxPrice: '',
+                  womenOnly: false
+                })}
+                variant="secondary"
+                className="text-xs uppercase tracking-wider"
+              >
+                Reset Filters
+              </AnimatedButton>
+            </GlassCard>
+          )}
+        </div>
       ) : (
         <div className="grid lg:grid-cols-3 gap-8 items-start">
           {/* Results List */}
