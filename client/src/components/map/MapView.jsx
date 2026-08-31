@@ -51,11 +51,21 @@ const MapView = ({
       }
     }
   }, [])
-
   // 2. Load Google Maps Script
   const loadGoogleMapsScript = (apiKey) => {
     if (window.google && window.google.maps) {
       initGoogleMap()
+      return
+    }
+
+    // Prevent duplicate script loading if another MapView is loading it at the same time
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => initGoogleMap())
+      existingScript.addEventListener('error', () => {
+        setUseGoogleMaps(false)
+        initLeafletMap()
+      })
       return
     }
 
