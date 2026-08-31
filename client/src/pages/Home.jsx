@@ -50,7 +50,7 @@ const Home = () => {
             <FaBolt className="text-[10px] animate-pulse" /> Intelligent shared mobility
           </span>
           <h1 className="text-5xl md:text-7xl font-black font-display text-white tracking-tight leading-none">
-            share your<span className="text-gradient"> ride save </span> your money
+            SHARE YOUR<span className="text-gradient"> RIDE SAVE </span> YOUR MONEY
           </h1>
           <p className="text-gray-400 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
             Connect with verified drivers. Match coordinates, optimize routes, and reduce emissions on an AI-powered shared transit ecosystem.
