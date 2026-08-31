@@ -178,6 +178,16 @@ const Navbar = () => {
                           <FaCog className="text-xs text-primary-400" /> My Bookings
                         </Link>
                       )}
+                      {user?.role === 'driver' && (
+                        <Link
+                          to="/driver/rides"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                        >
+                          <FaCar className="text-xs text-primary-400" /> My Rides & Roster
+                        </Link>
+                      )}
+
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors font-bold text-left cursor-pointer"
@@ -254,9 +264,11 @@ const Navbar = () => {
                   <Link to="/search" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Search Rides</Link>
                   <Link to="/chat" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Messages</Link>
                   <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Profile</Link>
-                  
-                  {user?.role === 'passenger' && (
+                                    {user?.role === 'passenger' && (
                     <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">My Bookings</Link>
+                  )}
+                  {user?.role === 'driver' && (
+                    <Link to="/driver/rides" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">My Rides & Roster</Link>
                   )}
 
                   <button

@@ -9,13 +9,14 @@ import GlassCard from '../components/ui/GlassCard'
 import AnimatedButton from '../components/ui/AnimatedButton'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { useAuth } from '../contexts/AuthContext'
 
 const Notifications = () => {
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
-
   useEffect(() => {
     fetchNotifications()
   }, [])
@@ -236,7 +237,7 @@ const Notifications = () => {
                     )}
                     {notification.data?.bookingId && (
                       <Link
-                        to={`/bookings`}
+                        to={user?.role === 'driver' ? `/driver/rides` : `/bookings`}
                         onClick={(e) => e.stopPropagation()}
                         className="mt-3.5"
                       >
