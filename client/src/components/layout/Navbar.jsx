@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaLeaf, FaBars, FaTimes, FaUser, FaSignOutAlt, FaPlus, FaSearch, FaComment, FaBell, FaCog, FaWallet, FaReceipt } from 'react-icons/fa'
+import { FaLeaf, FaBars, FaTimes, FaUser, FaSignOutAlt, FaPlus, FaSearch, FaComment, FaBell, FaCog, FaWallet, FaReceipt, FaCar } from 'react-icons/fa'
 import { useAuth } from '../../contexts/AuthContext'
 import AnimatedButton from '../ui/AnimatedButton'
 
