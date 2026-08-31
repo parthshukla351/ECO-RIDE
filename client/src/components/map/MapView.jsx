@@ -3,6 +3,7 @@ import { FaMapMarkerAlt, FaRoute, FaExpandAlt, FaCompress, FaLocationArrow } fro
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+
 const MapView = ({ 
   origin,
   destination,
@@ -13,7 +14,8 @@ const MapView = ({
   markers = [],
   onMapClick,
   onRouteCalculated, // Callback: ({ distance, duration })
-  routeCoordinates
+  routeCoordinates,
+  trafficDelaySeconds = 0
 }) => {
   const mapContainerRef = useRef(null)
   const [useGoogleMaps, setUseGoogleMaps] = useState(false)
@@ -211,10 +213,11 @@ const MapView = ({
     })
     // Draw routing
     if (showRoute) {
+      const routeColor = trafficDelaySeconds >= 600 ? '#ef4444' : trafficDelaySeconds >= 180 ? '#f59e0b' : '#10b981';
       if (routeCoordinates && routeCoordinates.length > 0) {
         const polylineCoordinates = routeCoordinates.map(coord => [coord.lat, coord.lng])
         const polyline = L.polyline(polylineCoordinates, {
-          color: '#10b981', // green route line
+          color: routeColor,
           weight: 4,
           opacity: 0.8
         }).addTo(map)
@@ -233,7 +236,7 @@ const MapView = ({
               const polylineCoordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]])
               
               const polyline = L.polyline(polylineCoordinates, {
-                color: '#10b981',
+                color: routeColor,
                 weight: 4,
                 opacity: 0.8
               }).addTo(map)
@@ -421,12 +424,13 @@ const MapView = ({
     }
     // Draw directions route
     if (showRoute) {
+      const routeColor = trafficDelaySeconds >= 600 ? '#ef4444' : trafficDelaySeconds >= 180 ? '#f59e0b' : '#10b981';
       if (routeCoordinates && routeCoordinates.length > 0) {
         const path = routeCoordinates.map(coord => new window.google.maps.LatLng(coord.lat, coord.lng))
         const polyline = new window.google.maps.Polyline({
           path: path,
           geodesic: true,
-          strokeColor: '#10b981',
+          strokeColor: routeColor,
           strokeOpacity: 0.8,
           strokeWeight: 4
         })
@@ -442,7 +446,7 @@ const MapView = ({
           map,
           suppressMarkers: true,
           polylineOptions: {
-            strokeColor: '#10b981',
+            strokeColor: routeColor,
             strokeWeight: 4,
             strokeOpacity: 0.8
           }

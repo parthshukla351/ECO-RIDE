@@ -144,7 +144,7 @@ exports.searchRides = async (req, res) => {
     } = req.query;
 
     const query = {
-      status: 'scheduled',
+      status: { $in: ['scheduled', 'active'] },
       availableSeats: { $gte: parseInt(seats) }
     };
 

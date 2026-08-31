@@ -52,14 +52,37 @@ const initSocket = (server) => {
     socket.on('leaveRide', (rideId) => {
       socket.leave(`ride_${rideId}`);
     });
-
     // ---- LIVE LOCATION ----
-    socket.on('updateLocation', ({ rideId, location }) => {
+    socket.on('updateLocation', async ({ rideId, location }) => {
       socket.to(`ride_${rideId}`).emit('driverLocationUpdate', {
         driverId: socket.user._id,
         location,
         timestamp: new Date()
       });
+
+      if (socket.user.role === 'driver') {
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(socket.user._id, {
+          currentLocation: {
+            lat: location.lat,
+            lng: location.lng,
+            updatedAt: new Date()
+          }
+        });
+      }
+    });
+
+    socket.on('updateDriverLiveLocation', async ({ location }) => {
+      if (socket.user.role === 'driver') {
+        const User = require('../models/User');
+        await User.findByIdAndUpdate(socket.user._id, {
+          currentLocation: {
+            lat: location.lat,
+            lng: location.lng,
+            updatedAt: new Date()
+          }
+        });
+      }
     });
 
     // ---- CHAT EVENTS ----

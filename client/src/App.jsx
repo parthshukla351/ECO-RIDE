@@ -40,6 +40,8 @@ import AiAssistant from './pages/AiAssistant'
 import CarbonDashboard from './pages/CarbonDashboard'
 import RewardStore from './pages/RewardStore'
 import DriverInsights from './pages/DriverInsights'
+import RequestRide from './pages/RequestRide'
+import OnDemandTracking from './pages/OnDemandTracking'
 
 function App() {
   return (
@@ -86,6 +88,8 @@ function App() {
                 {/* Protected - Passenger */}
                 <Route element={<ProtectedRoute allowedRoles={['passenger']} />}>
                   <Route path="/dashboard" element={<PassengerDashboard />} />
+                  <Route path="/request-ride" element={<RequestRide />} />
+                  <Route path="/ondemand/tracking/:requestId" element={<OnDemandTracking />} />
                 </Route>
 
                 {/* Protected - Driver */}

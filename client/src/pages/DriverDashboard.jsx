@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   FaCar, FaLeaf, FaMoneyBillWave, FaStar, 
   FaPlus, FaHistory, FaUsers, FaRoute,
-  FaChartLine, FaClock
+  FaChartLine, FaClock, FaTimes
 } from 'react-icons/fa'
 import { useAuth } from '../contexts/AuthContext'
+import { useSocket } from '../contexts/SocketContext'
 import GlassCard from '../components/ui/GlassCard'
 import StatCard from '../components/ui/StatCard'
 import AnimatedButton from '../components/ui/AnimatedButton'
@@ -17,6 +18,81 @@ import VerificationBadge from '../components/ui/VerificationBadge'
 
 const DriverDashboard = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const { socket } = useSocket()
+  const [activeRequest, setActiveRequest] = useState(null)
+
+  useEffect(() => {
+    if (!socket) return
+
+    socket.on('onDemandRequestCreated', (data) => {
+      setActiveRequest(data)
+      toast.success('🚗 New ride request nearby!')
+    })
+
+    socket.on('onDemandRequestClosed', ({ requestId }) => {
+      setActiveRequest((prev) => {
+        if (prev && prev.requestId === requestId) {
+          return null
+        }
+        return prev
+      })
+    })
+
+    // Update driver's location periodically
+    const sendLocationUpdate = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const loc = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            socket.emit('updateDriverLiveLocation', { location: loc });
+            api.post('/ondemand/location', { latitude: loc.lat, longitude: loc.lng });
+          },
+          (err) => console.warn('Geolocation error:', err.message),
+          { enableHighAccuracy: true }
+        );
+      }
+    };
+
+    sendLocationUpdate();
+    const interval = setInterval(sendLocationUpdate, 15000);
+
+    return () => {
+      socket.off('onDemandRequestCreated')
+      socket.off('onDemandRequestClosed')
+      clearInterval(interval)
+    }
+  }, [socket])
+
+  const handleAcceptRequest = async () => {
+    if (!activeRequest) return
+    try {
+      const { data } = await api.post('/ondemand/accept', { requestId: activeRequest.requestId })
+      if (data.success) {
+        toast.success('Ride request accepted!')
+        setActiveRequest(null)
+        navigate('/driver/rides')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to accept request')
+      setActiveRequest(null)
+    }
+  }
+
+  const handleDeclineRequest = async () => {
+    if (!activeRequest) return
+    try {
+      await api.post('/ondemand/decline', { requestId: activeRequest.requestId })
+      setActiveRequest(null)
+    } catch (err) {
+      console.warn('Decline error:', err.message)
+      setActiveRequest(null)
+    }
+  }
+
   const [stats, setStats] = useState(null)
   const [paymentStats, setPaymentStats] = useState(null)
   const [recentRides, setRecentRides] = useState([])
@@ -52,8 +128,9 @@ const DriverDashboard = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome & New Ride Action */}
+    <>
+      <div className="space-y-8 pb-12">
+        {/* Welcome & New Ride Action */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -300,7 +377,76 @@ const DriverDashboard = () => {
           </GlassCard>
         </div>
       </div>
-    </div>
+
+      {/* On-Demand Ride Request Card Overlay */}
+      {activeRequest && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <GlassCard className="max-w-md w-full border-primary-500/30 bg-dark-950/90 p-6 space-y-6">
+            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <h3 className="text-base font-black text-white font-display flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-primary-500 animate-pulse"></span>
+                NEW RIDE REQUEST
+              </h3>
+              <button 
+                onClick={() => setActiveRequest(null)}
+                className="text-gray-400 hover:text-white text-sm cursor-pointer"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm font-semibold">
+              <div>
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider block">Passenger</span>
+                <span className="text-white text-base">{activeRequest.riderName}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider block">Pickup</span>
+                  <span className="text-white">{activeRequest.origin.city}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider block">Destination</span>
+                  <span className="text-white">{activeRequest.destination.city}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center bg-white/5 p-3 rounded-lg border border-white/5">
+                <div>
+                  <span className="text-[9px] text-gray-500 uppercase block">Distance</span>
+                  <span className="text-white font-bold">{activeRequest.distance} km</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-500 uppercase block">Fare</span>
+                  <span className="text-primary-400 font-bold">₹{activeRequest.estimatedTotal}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-gray-500 uppercase block">Radius Away</span>
+                  <span className="text-white font-bold">{activeRequest.distanceToRider} km</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-2">
+              <button
+                onClick={handleDeclineRequest}
+                className="flex-1 btn-secondary border border-red-500/20 text-red-400 hover:bg-red-500/10 py-3 rounded-xl font-bold text-sm cursor-pointer"
+              >
+                Decline
+              </button>
+              <button
+                onClick={handleAcceptRequest}
+                className="flex-1 bg-primary-500 text-black hover:bg-primary-400 py-3 rounded-xl font-bold text-sm cursor-pointer"
+              >
+                Accept & Go
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+      </div>
+    </>
   )
 }
 

@@ -87,7 +87,13 @@ const userSchema = new mongoose.Schema({
     enum: ['NOT_STARTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED'],
     default: 'NOT_STARTED'
   },
-
+  currentLocation: {
+    lat: Number,
+    lng: Number,
+    updatedAt: Date
+  },
+  isAvailable: { type: Boolean, default: true },
+  pushToken: String,
   // Wallet
   walletBalance: { type: Number, default: 0 },
 

@@ -105,6 +105,49 @@ const MyRides = () => {
     }
   }
 
+  const handleDriverArrived = async (bookingId) => {
+    try {
+      await api.put(`/bookings/${bookingId}/driver-arrived`)
+      toast.success('Arrival marked! Waiting timer started.')
+      fetchRides()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to mark arrival')
+    }
+  }
+
+  const handlePassengerArrived = async (bookingId) => {
+    try {
+      const { data } = await api.put(`/bookings/${bookingId}/passenger-arrived`)
+      if (data.booking.passengerLateCharge > 0) {
+        toast.success(`Passenger boarded! Late fee of ₹${data.booking.passengerLateCharge} charged.`)
+      } else {
+        toast.success('Passenger boarded!')
+      }
+      fetchRides()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to mark boarding')
+    }
+  }
+
+  const handleUpdateTraffic = async (rideId, newDelaySeconds) => {
+    try {
+      const { data } = await api.put(`/bookings/ride/${rideId}/traffic`, { trafficDelaySeconds: newDelaySeconds })
+      toast.success(`Traffic delay updated! Surcharge: ₹${data.trafficCharge}`)
+      fetchRides()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update traffic delay')
+    }
+  }
+
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date())
+    }, 10000)
+    return () => clearInterval(timer)
+  }, [])
+
   const statusColors = {
     scheduled: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
     in_progress: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
@@ -317,9 +360,88 @@ const MyRides = () => {
                           <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${statusColors[booking.status]}`}>
                             {booking.status}
                           </span>
+
+                          {booking.status === 'confirmed' && !booking.driverArrivedAt && (
+                            <button
+                              type="button"
+                              onClick={() => handleDriverArrived(booking._id)}
+                              className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded text-[9px] font-black uppercase hover:bg-yellow-500/35 cursor-pointer outline-none"
+                            >
+                              Arrived
+                            </button>
+                          )}
+
+                          {booking.status === 'confirmed' && booking.driverArrivedAt && !booking.passengerArrivedAt && (
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const elapsedSeconds = Math.max(0, Math.floor((now - new Date(booking.driverArrivedAt)) / 1000));
+                                const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+                                const waitingPenalty = elapsedMinutes * 1;
+                                const mins = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+                                const secs = (elapsedSeconds % 60).toString().padStart(2, '0');
+                                return (
+                                  <span className="text-[10px] text-yellow-400 font-bold ml-1">
+                                    Waiting: {mins}:{secs} (Penalty: ₹{waitingPenalty})
+                                  </span>
+                                );
+                              })()}
+                              <button
+                                type="button"
+                                onClick={() => handlePassengerArrived(booking._id)}
+                                className="ml-1 px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded text-[9px] font-black uppercase hover:bg-green-500/35 cursor-pointer outline-none"
+                              >
+                                Boarded
+                              </button>
+                            </div>
+                          )}
+
+                          {booking.passengerArrivedAt && (
+                            <span className="ml-2 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[9px] font-black uppercase">
+                              ✓ Boarded
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
+
+                    {/* Traffic Surcharge Control Panel for Driver */}
+                    {ride.status === 'in_progress' && (
+                      <div className="mt-4 pt-3 border-t border-white/5 space-y-2">
+                        <p className="text-[9px] uppercase tracking-wider text-gray-500 font-black">
+                          🚦 Traffic Simulation Dashboard
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateTraffic(ride._id, (ride.trafficDelaySeconds || 0) + 120)}
+                            className="px-2.5 py-1 bg-yellow-500/15 border border-yellow-500/25 text-yellow-400 hover:bg-yellow-500/25 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
+                          >
+                            +2m Traffic Delay (+₹5)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateTraffic(ride._id, (ride.trafficDelaySeconds || 0) + 600)}
+                            className="px-2.5 py-1 bg-red-500/15 border border-red-500/25 text-red-400 hover:bg-red-500/25 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
+                          >
+                            +10m Traffic Delay (+₹25)
+                          </button>
+                          {ride.trafficDelaySeconds > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateTraffic(ride._id, 0)}
+                              className="px-2.5 py-1 bg-gray-500/15 border border-white/10 text-gray-300 hover:bg-white/10 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
+                            >
+                              Clear Traffic (₹0)
+                            </button>
+                          )}
+                        </div>
+                        {ride.trafficDelaySeconds > 0 && (
+                          <p className="text-[10px] text-red-400 font-bold">
+                            Current delay: {Math.round(ride.trafficDelaySeconds / 60)}m. Current surcharge: ₹{ride.trafficCharge || 0}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </GlassCard>

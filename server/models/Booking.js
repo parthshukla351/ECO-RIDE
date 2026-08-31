@@ -84,6 +84,18 @@ const bookingSchema = new mongoose.Schema({
   driverArrivedAt: Date,
   passengerArrivedAt: Date,
 
+  // Detailed route-based fare splitting audit fields
+  originalPassenger1Fare: { type: Number, default: 0 },
+  passenger2RouteDistance: { type: Number, default: 0 },
+  passenger2BaseFare: { type: Number, default: 0 },
+  sharedDistance: { type: Number, default: 0 },
+  passenger1SharedSaving: { type: Number, default: 0 },
+  trafficSurchargePassenger1: { type: Number, default: 0 },
+  trafficSurchargePassenger2: { type: Number, default: 0 },
+  waitingSurchargePassenger2: { type: Number, default: 0 },
+  finalPassenger1Fare: { type: Number, default: 0 },
+  finalPassenger2Fare: { type: Number, default: 0 },
+
 }, { timestamps: true });
 
 bookingSchema.index({ ride: 1, passenger: 1 });

@@ -181,6 +181,73 @@ const MyBookings = () => {
                         </span>
                       )}
                     </div>
+
+                    {booking.isSharedRideCandidate && (
+                      <div className="mt-4 bg-white/5 border border-white/5 p-4 rounded-xl space-y-2 text-xs font-semibold text-gray-300">
+                        <div className="text-[10px] font-black uppercase text-gray-500 tracking-wider pb-1 border-b border-white/5">
+                          Shared Ride Cost-Split Breakdown
+                        </div>
+                        {booking.originalPassenger1Fare > 0 ? (
+                          // Passenger 1 View
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Original Fare:</span>
+                              <span className="text-white">₹{booking.originalPassenger1Fare}</span>
+                            </div>
+                            <div className="flex justify-between text-green-400">
+                              <span>Shared Route Saving:</span>
+                              <span>-₹{booking.sharedRideAdjustment}</span>
+                            </div>
+                            {booking.trafficCharge > 0 && (
+                              <div className="flex justify-between text-yellow-400">
+                                <span>Traffic Surcharge:</span>
+                                <span>+₹{booking.trafficCharge}</span>
+                              </div>
+                            )}
+                            {booking.passengerLateCharge > 0 && (
+                              <div className="flex justify-between text-green-400">
+                                <span>Waiting Adjustment (Late Passenger 2):</span>
+                                <span>-₹{booking.passengerLateCharge}</span>
+                              </div>
+                            )}
+                            <div className="border-t border-white/5 my-1 pt-1 flex justify-between font-bold text-primary-400">
+                              <span>Updated Fare:</span>
+                              <span>₹{booking.totalAmount}</span>
+                            </div>
+                            <p className="text-[9px] text-gray-500 font-bold leading-normal pt-1 text-center">
+                              *Fare reduced because route is being shared with another rider.
+                            </p>
+                          </div>
+                        ) : (
+                          // Passenger 2 View
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Route Fare:</span>
+                              <span className="text-white">₹{booking.originalFare || booking.totalAmount}</span>
+                            </div>
+                            {booking.trafficCharge > 0 && (
+                              <div className="flex justify-between text-yellow-400">
+                                <span>Traffic Surcharge:</span>
+                                <span>+₹{booking.trafficCharge}</span>
+                              </div>
+                            )}
+                            {booking.passengerLateCharge > 0 && (
+                              <div className="flex justify-between text-red-400">
+                                <span>Late Pickup Charge:</span>
+                                <span>+₹{booking.passengerLateCharge}</span>
+                              </div>
+                            )}
+                            <div className="border-t border-white/5 my-1 pt-1 flex justify-between font-bold text-primary-400">
+                              <span>Final Fare:</span>
+                              <span>₹{booking.totalAmount}</span>
+                            </div>
+                            <p className="text-[9px] text-gray-500 font-bold leading-normal pt-1 text-center">
+                              *Fare computed dynamically based on segment coordinates.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Middle: Details */}

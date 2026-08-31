@@ -67,6 +67,58 @@ const Notifications = () => {
     }
   }
 
+  const handlePassengerApprove = async (e, bookingId, notificationId) => {
+    e.stopPropagation();
+    try {
+      const { data } = await api.put(`/bookings/${bookingId}/passenger-approve`);
+      if (data.success) {
+        toast.success('Share approved! Sent to driver.');
+        handleMarkAsRead(notificationId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to approve share request');
+    }
+  };
+
+  const handlePassengerDeny = async (e, bookingId, notificationId) => {
+    e.stopPropagation();
+    try {
+      const { data } = await api.put(`/bookings/${bookingId}/passenger-deny`);
+      if (data.success) {
+        toast.success('Share request denied.');
+        handleMarkAsRead(notificationId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to deny share request');
+    }
+  };
+
+  const handleDriverApprove = async (e, bookingId, notificationId) => {
+    e.stopPropagation();
+    try {
+      const { data } = await api.put(`/bookings/${bookingId}/confirm`);
+      if (data.success) {
+        toast.success('Shared ride passenger confirmed!');
+        handleMarkAsRead(notificationId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to confirm booking');
+    }
+  };
+
+  const handleDriverDecline = async (e, bookingId, notificationId) => {
+    e.stopPropagation();
+    try {
+      const { data } = await api.put(`/bookings/${bookingId}/reject`);
+      if (data.success) {
+        toast.success('Booking request declined.');
+        handleMarkAsRead(notificationId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to decline booking');
+    }
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'booking_confirmed':
@@ -236,15 +288,54 @@ const Notifications = () => {
                       </Link>
                     )}
                     {notification.data?.bookingId && (
-                      <Link
-                        to={user?.role === 'driver' ? `/driver/rides` : `/bookings`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-3.5"
-                      >
-                        <AnimatedButton variant="secondary" className="py-1.5 px-3 text-[10px] uppercase font-black tracking-wider">
-                          View Reservations
-                        </AnimatedButton>
-                      </Link>
+                      <div className="flex flex-col gap-2">
+                        {notification.type === 'shared_ride_passenger_approval_required' && (
+                          <div className="mt-3 flex gap-3" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => handlePassengerApprove(e, notification.data.bookingId, notification._id)}
+                              className="bg-primary-500 text-black hover:bg-primary-400 py-1.5 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                              Accept & Share
+                            </button>
+                            <button
+                              onClick={(e) => handlePassengerDeny(e, notification.data.bookingId, notification._id)}
+                              className="btn-secondary border border-red-500/20 text-red-400 hover:bg-red-500/10 py-1.5 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                              Deny
+                            </button>
+                          </div>
+                        )}
+
+                        {notification.type === 'shared_ride_driver_approval_required' && (
+                          <div className="mt-3 flex gap-3" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => handleDriverApprove(e, notification.data.bookingId, notification._id)}
+                              className="bg-primary-500 text-black hover:bg-primary-400 py-1.5 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={(e) => handleDriverDecline(e, notification.data.bookingId, notification._id)}
+                              className="btn-secondary border border-red-500/20 text-red-400 hover:bg-red-500/10 py-1.5 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
+
+                        {notification.type !== 'shared_ride_passenger_approval_required' && 
+                         notification.type !== 'shared_ride_driver_approval_required' && (
+                          <Link
+                            to={user?.role === 'driver' ? `/driver/rides` : `/bookings`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-3.5"
+                          >
+                            <AnimatedButton variant="secondary" className="py-1.5 px-3 text-[10px] uppercase font-black tracking-wider">
+                              View Reservations
+                            </AnimatedButton>
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

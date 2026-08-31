@@ -634,6 +634,32 @@ const SearchRide = () => {
                         )}
                       </div>
 
+                      {ride.matchType && ride.matchType !== 'EXACT_ROUTE' && (
+                        <div className="mt-3 bg-white/5 border border-white/5 p-3 rounded-xl space-y-1.5 text-xs text-gray-300 font-semibold" onClick={(e) => e.stopPropagation()}>
+                          <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Matched Shared Route Info</div>
+                          <div className="flex justify-between">
+                            <span>Driver's Route:</span>
+                            <span className="text-white font-bold">{ride.origin?.city} → {ride.destination?.city}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Your Route:</span>
+                            <span className="text-white font-bold">{filters.origin || ride.origin?.city} → {filters.destination || ride.destination?.city}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Segment Distance:</span>
+                            <span className="text-primary-400 font-bold">{ride.segmentDistance || ride.distance} km</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Available Seats:</span>
+                            <span className="text-white font-bold">{ride.availableSeats}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Your Fare:</span>
+                            <span className="text-primary-400 font-bold">₹{ride.passengerPricePerSeat || ride.pricePerSeat}</span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Preferences Tags */}
                       <div className="flex flex-wrap gap-2 mt-3">
                         {ride.preferences?.womenOnly && (

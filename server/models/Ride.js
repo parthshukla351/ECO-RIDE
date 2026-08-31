@@ -68,13 +68,11 @@ const rideSchema = new mongoose.Schema({
     acAvailable: { type: Boolean, default: true },
     luggageAllowed: { type: Boolean, default: true }
   },
-
   rideType: {
     type: String,
-    enum: ['regular', 'women_only', 'student', 'office'],
+    enum: ['regular', 'women_only', 'student', 'office', 'on_demand'],
     default: 'regular'
   },
-
   // Carbon data
   carbonEmission: Number,
   carbonSaved: Number,
