@@ -24,7 +24,7 @@ const GlassCard = ({
           ? '0 20px 40px -15px rgba(16, 185, 129, 0.15)' 
           : '0 20px 40px -15px rgba(0, 0, 0, 0.4)'
       } : undefined}
-      className={`glass bg-dark-900/50 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-xl transition-colors duration-300 ${
+      className={`glass bg-white/80 dark:bg-dark-900/50 backdrop-blur-md border border-slate-200/80 dark:border-white/5 text-slate-900 dark:text-gray-100 rounded-2xl p-6 shadow-md dark:shadow-xl transition-all duration-300 ${
         hoverable ? 'cursor-pointer' : ''
       } ${className}`}
       {...props}

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { SocketProvider } from './contexts/SocketContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -45,18 +46,19 @@ import OnDemandTracking from './pages/OnDemandTracking'
 
 function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <Router>
-          <div className="min-h-screen bg-dark-950 text-gray-200 flex flex-col relative overflow-hidden bg-hero selection:bg-primary-500/20 selection:text-primary-400">
-            {/* Ambient Background Glows */}
-            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-primary-500/5 rounded-full blur-[160px] pointer-events-none" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-[160px] pointer-events-none" />
+    <ThemeProvider>
+      <AuthProvider>
+        <SocketProvider>
+          <Router>
+            <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-dark-950 dark:text-gray-200 flex flex-col relative overflow-hidden bg-hero transition-colors duration-300">
+              {/* Ambient Background Glows */}
+              <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-primary-500/10 dark:bg-primary-500/5 rounded-full blur-[160px] pointer-events-none" />
+              <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-[160px] pointer-events-none" />
 
-            <Navbar />
-            <CommandPalette />
-            
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+              <Navbar />
+              <CommandPalette />
+              
+              <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Home />} />
@@ -114,6 +116,7 @@ function App() {
         </Router>
       </SocketProvider>
     </AuthProvider>
+  </ThemeProvider>
   )
 }
 

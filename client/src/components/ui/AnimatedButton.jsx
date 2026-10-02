@@ -13,9 +13,9 @@ const AnimatedButton = ({
   const baseStyles = 'inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl transition-all duration-200 outline-none cursor-pointer border'
   
   const variants = {
-    primary: 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white border-primary-500/20 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/35',
-    secondary: 'bg-white/5 hover:bg-white/10 text-gray-200 border-white/5 hover:border-white/10 backdrop-blur-md',
-    outline: 'border-primary-500/40 hover:border-primary-400 text-primary-400 hover:bg-primary-500/5',
+    primary: 'btn-primary bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white border-primary-500/20 shadow-lg shadow-primary-500/20 hover:shadow-primary-500/35',
+    secondary: 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:text-gray-200 dark:border-white/5 backdrop-blur-md',
+    outline: 'border-primary-500/40 hover:border-primary-500 text-primary-600 dark:text-primary-400 hover:bg-primary-500/10 dark:hover:bg-primary-500/5',
     danger: 'bg-red-500/10 hover:bg-red-500/25 text-red-400 border-red-500/20 hover:border-red-400/30'
   }
 

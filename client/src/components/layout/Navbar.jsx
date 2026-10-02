@@ -1,13 +1,18 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaLeaf, FaBars, FaTimes, FaUser, FaSignOutAlt, FaPlus, FaSearch, FaComment, FaBell, FaCog, FaWallet, FaReceipt, FaCar } from 'react-icons/fa'
+import { 
+  FaLeaf, FaBars, FaTimes, FaUser, FaSignOutAlt, FaPlus, 
+  FaSearch, FaComment, FaBell, FaCog, FaWallet, FaReceipt, 
+  FaCar, FaSun, FaMoon 
+} from 'react-icons/fa'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import AnimatedButton from '../ui/AnimatedButton'
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth()
+  const { theme, isDark, toggleTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const navigate = useNavigate()
@@ -29,7 +34,7 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path
 
   return (
-    <nav className="sticky top-4 mx-auto w-[calc(100%-2rem)] max-w-7xl z-50 rounded-2xl border border-white/5 bg-dark-950/75 backdrop-blur-xl shadow-2xl transition-all duration-300">
+    <nav className="sticky top-4 mx-auto w-[calc(100%-2rem)] max-w-7xl z-50 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-dark-950/75 backdrop-blur-xl shadow-lg dark:shadow-2xl transition-all duration-300">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -38,7 +43,7 @@ const Navbar = () => {
             <div className="w-8 h-8 bg-primary-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
               <FaLeaf className="text-white text-sm" />
             </div>
-            <span className="text-lg font-black font-display text-white tracking-tight">
+            <span className="text-lg font-black font-display text-slate-900 dark:text-white tracking-tight">
               EcoRide <span className="text-primary-500">AI</span>
             </span>
           </Link>
@@ -47,16 +52,16 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-6">
             {!isAuthenticated ? (
               <>
-                <Link to="/" className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive('/') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}>Home</Link>
-                <Link to="/search" className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive('/search') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}>Search Rides</Link>
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-bold hover:text-white cursor-pointer transition-colors">About</span>
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-bold hover:text-white cursor-pointer transition-colors">Contact</span>
+                <Link to="/" className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive('/') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}>Home</Link>
+                <Link to="/search" className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive('/search') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}>Search Rides</Link>
+                <span className="text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white text-xs uppercase tracking-wider font-bold cursor-pointer transition-colors">About</span>
+                <span className="text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white text-xs uppercase tracking-wider font-bold cursor-pointer transition-colors">Contact</span>
               </>
             ) : (
               <>
                 <Link 
                   to={getDashboardPath()} 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive(getDashboardPath()) ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors ${isActive(getDashboardPath()) ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   Dashboard
                 </Link>
@@ -64,7 +69,7 @@ const Navbar = () => {
                 {user?.role === 'driver' && (
                   <Link 
                     to="/driver/publish-ride" 
-                    className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/driver/publish-ride') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                    className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/driver/publish-ride') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                   >
                     <FaPlus className="text-[10px]" /> Publish Ride
                   </Link>
@@ -72,35 +77,35 @@ const Navbar = () => {
 
                 <Link 
                   to="/search" 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/search') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/search') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   <FaSearch className="text-[10px]" /> Search Ride
                 </Link>
 
                 <Link 
                   to="/chat" 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/chat') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/chat') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   <FaComment className="text-[10px]" /> Messages
                 </Link>
 
                 <Link 
                   to="/notifications" 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 relative ${isActive('/notifications') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 relative ${isActive('/notifications') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   <FaBell className="text-[10px]" /> Notifications
                 </Link>
 
                 <Link 
                   to="/ai-assistant" 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/ai-assistant') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/ai-assistant') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   ✨ Eco Assistant
                 </Link>
 
                 <Link 
                   to="/rewards" 
-                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/rewards') ? 'text-primary-400' : 'text-gray-400 hover:text-white'}`}
+                  className={`text-xs uppercase tracking-wider font-bold transition-colors flex items-center gap-1.5 ${isActive('/rewards') ? 'text-primary-600 dark:text-primary-400 font-black' : 'text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white'}`}
                 >
                   🎁 Rewards Store
                 </Link>
@@ -109,10 +114,25 @@ const Navbar = () => {
           </div>
 
           {/* Right Side Actions */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {/* Theme Switcher Toggle (Desktop) */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label="Toggle Theme"
+              className="w-9 h-9 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-amber-500 dark:text-yellow-300 transition-all cursor-pointer shadow-sm active:scale-95"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDark ? (
+                <FaSun className="text-sm transition-transform duration-300 rotate-0 hover:rotate-45" />
+              ) : (
+                <FaMoon className="text-xs text-indigo-600 transition-transform duration-300 -rotate-12 hover:rotate-0" />
+              )}
+            </button>
+
             {!isAuthenticated ? (
               <>
-                <Link to="/login" className="text-xs uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors">
+                <Link to="/login" className="text-xs uppercase tracking-wider font-bold text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                   Log in
                 </Link>
                 <Link to="/register">
@@ -126,16 +146,16 @@ const Navbar = () => {
                 {/* User Profile Trigger */}
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-full pl-2 pr-4 py-1.5 hover:bg-white/10 transition-all outline-none cursor-pointer"
+                  className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-full pl-2 pr-4 py-1.5 hover:bg-slate-200 dark:hover:bg-white/10 transition-all outline-none cursor-pointer"
                 >
                   <img
                     src={user?.avatar || 'https://res.cloudinary.com/demo/image/upload/v1/default-avatar.png'}
                     alt={user?.name}
-                    className="w-7 h-7 rounded-full object-cover border border-white/15"
+                    className="w-7 h-7 rounded-full object-cover border border-slate-300 dark:border-white/15"
                   />
                   <div className="text-left leading-tight hidden lg:block">
-                    <p className="text-xs font-black text-white">{user?.name?.split(' ')[0]}</p>
-                    <p className="text-[9px] text-primary-400 font-black uppercase tracking-wider">{user?.ecoLevel || 'Seedling'}</p>
+                    <p className="text-xs font-black text-slate-900 dark:text-white">{user?.name?.split(' ')[0]}</p>
+                    <p className="text-[9px] text-primary-600 dark:text-primary-400 font-black uppercase tracking-wider">{user?.ecoLevel || 'Seedling'}</p>
                   </div>
                 </button>
 
@@ -147,51 +167,51 @@ const Navbar = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2.5 w-48 bg-dark-950/90 border border-white/5 rounded-xl shadow-2xl p-2 z-50 text-sm glass-dark"
+                      className="absolute right-0 mt-2.5 w-48 bg-white dark:bg-dark-950/95 border border-slate-200 dark:border-white/5 rounded-xl shadow-2xl p-2 z-50 text-sm"
                     >
                       <Link
                         to="/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-semibold"
                       >
-                        <FaUser className="text-xs text-primary-400" /> Profile
+                        <FaUser className="text-xs text-primary-500" /> Profile
                       </Link>
                       <Link
                         to="/wallet"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-semibold"
                       >
-                        <FaWallet className="text-xs text-primary-400" /> My Wallet
+                        <FaWallet className="text-xs text-primary-500" /> My Wallet
                       </Link>
                       <Link
                         to="/payment-history"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-semibold"
                       >
-                        <FaReceipt className="text-xs text-primary-400" /> Payment History
+                        <FaReceipt className="text-xs text-primary-500" /> Payment History
                       </Link>
                       {user?.role === 'passenger' && (
                         <Link
                           to="/bookings"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                          className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-semibold"
                         >
-                          <FaCog className="text-xs text-primary-400" /> My Bookings
+                          <FaCog className="text-xs text-primary-500" /> My Bookings
                         </Link>
                       )}
                       {user?.role === 'driver' && (
                         <Link
                           to="/driver/rides"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors font-semibold"
+                          className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-700 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors font-semibold"
                         >
-                          <FaCar className="text-xs text-primary-400" /> My Rides & Roster
+                          <FaCar className="text-xs text-primary-500" /> My Rides & Roster
                         </Link>
                       )}
 
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-500/10 rounded-lg text-red-400 transition-colors font-bold text-left cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors font-bold text-left cursor-pointer"
                       >
                         <FaSignOutAlt className="text-xs" /> Logout
                       </button>
@@ -203,15 +223,25 @@ const Navbar = () => {
           </div>
 
           {/* Hamburger Menu Toggle (Mobile) */}
-          <div className="md:hidden flex items-center gap-4 relative z-50">
+          <div className="md:hidden flex items-center gap-3 relative z-50">
+            {/* Mobile Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label="Toggle Theme"
+              className="w-8 h-8 rounded-full flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-amber-500 dark:text-yellow-300 transition-all cursor-pointer"
+            >
+              {isDark ? <FaSun className="text-xs" /> : <FaMoon className="text-xs text-indigo-600" />}
+            </button>
+
             {isAuthenticated && (
-              <Link to="/notifications" className="text-gray-400 hover:text-white relative">
+              <Link to="/notifications" className="text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white relative">
                 <FaBell />
               </Link>
             )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-gray-400 hover:text-white transition-colors p-1 cursor-pointer"
+              className="text-slate-600 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white transition-colors p-1 cursor-pointer"
             >
               {mobileMenuOpen ? <FaTimes className="text-lg" /> : <FaBars className="text-lg" />}
             </button>
@@ -228,15 +258,13 @@ const Navbar = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="md:hidden border-t border-white/5 bg-dark-950 rounded-b-2xl overflow-hidden"
+            className="md:hidden border-t border-slate-200 dark:border-white/5 bg-white dark:bg-dark-950 rounded-b-2xl overflow-hidden shadow-xl"
           >
-            <div className="px-4 pt-4 pb-6 space-y-3 flex flex-col">
+            <div className="px-4 pt-4 pb-6 space-y-3 flex flex-col text-slate-800 dark:text-gray-200">
               {!isAuthenticated ? (
                 <>
-                  <Link to="/" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-bold py-2 text-base border-b border-white/5">Home</Link>
-                  <Link to="/search" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-bold py-2 text-base border-b border-white/5">Search Rides</Link>
-                  <span className="text-gray-400 hover:text-white font-bold py-2 text-base border-b border-white/5 cursor-pointer">About</span>
-                  <span className="text-gray-400 hover:text-white font-bold py-2 text-base border-b border-white/5 cursor-pointer">Contact</span>
+                  <Link to="/" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-bold py-2 text-base border-b border-slate-100 dark:border-white/5">Home</Link>
+                  <Link to="/search" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-bold py-2 text-base border-b border-slate-100 dark:border-white/5">Search Rides</Link>
                   <div className="flex gap-4 pt-2">
                     <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center"><AnimatedButton variant="secondary" fullWidth>Log In</AnimatedButton></Link>
                     <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center"><AnimatedButton variant="primary" fullWidth>Sign Up</AnimatedButton></Link>
@@ -244,37 +272,37 @@ const Navbar = () => {
                 </>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 mb-2">
+                  <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/5 mb-2">
                     <img
                       src={user?.avatar || 'https://res.cloudinary.com/demo/image/upload/v1/default-avatar.png'}
                       alt={user?.name}
-                      className="w-10 h-10 rounded-full object-cover border border-white/10"
+                      className="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-white/10"
                     />
                     <div>
-                      <p className="text-sm font-black text-white leading-tight">{user?.name}</p>
-                      <p className="text-xs text-primary-400 font-bold uppercase tracking-wider">{user?.ecoLevel || 'Seedling'} • {user?.ecoPoints || 0} Points</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user?.name}</p>
+                      <p className="text-xs text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider">{user?.ecoLevel || 'Seedling'} • {user?.ecoPoints || 0} Points</p>
                     </div>
                   </div>
 
-                  <Link to={getDashboardPath()} onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Dashboard</Link>
+                  <Link to={getDashboardPath()} onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">Dashboard</Link>
                   
                   {user?.role === 'driver' && (
-                    <Link to="/driver/publish-ride" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Publish Ride</Link>
+                    <Link to="/driver/publish-ride" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">Publish Ride</Link>
                   )}
                   
-                  <Link to="/search" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Search Rides</Link>
-                  <Link to="/chat" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Messages</Link>
-                  <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">Profile</Link>
-                                    {user?.role === 'passenger' && (
-                    <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">My Bookings</Link>
+                  <Link to="/search" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">Search Rides</Link>
+                  <Link to="/chat" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">Messages</Link>
+                  <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">Profile</Link>
+                  {user?.role === 'passenger' && (
+                    <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">My Bookings</Link>
                   )}
                   {user?.role === 'driver' && (
-                    <Link to="/driver/rides" onClick={() => setMobileMenuOpen(false)} className="text-gray-400 hover:text-white font-semibold py-2 text-base border-b border-white/5">My Rides & Roster</Link>
+                    <Link to="/driver/rides" onClick={() => setMobileMenuOpen(false)} className="text-slate-700 dark:text-gray-400 hover:text-primary-600 dark:hover:text-white font-semibold py-2 text-base border-b border-slate-100 dark:border-white/5">My Rides & Roster</Link>
                   )}
 
                   <button
                     onClick={handleLogout}
-                    className="w-full btn-secondary text-red-400 border border-red-500/10 hover:bg-red-500/10 py-3 text-center rounded-xl text-sm font-bold mt-4 cursor-pointer"
+                    className="w-full btn-secondary text-red-500 border border-red-500/20 hover:bg-red-500/10 py-3 text-center rounded-xl text-sm font-bold mt-4 cursor-pointer"
                   >
                     Logout
                   </button>
